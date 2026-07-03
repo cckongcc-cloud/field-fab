@@ -118,6 +118,15 @@
   #toast{position:fixed; left:50%; bottom:110px; transform:translateX(-50%);
     background:#000; color:#fff; font-size:13px; padding:9px 16px; border-radius:20px;
     opacity:0; transition:opacity .2s; pointer-events:none; white-space:nowrap; z-index:9;}
+  /* ── 현장일보 ── */
+  .chips{grid-column:1 / -1; display:flex; flex-wrap:wrap; gap:6px;}
+  .chips button{background:#15171A; border:1px solid var(--line); color:var(--sub);
+    border-radius:14px; padding:7px 12px; font-size:12.5px; font-weight:700;}
+  .chips button:active{border-color:var(--acc); color:var(--acc);}
+  #r_out{margin:0; white-space:pre-wrap; word-break:break-all; font-family:inherit;
+    font-size:14.5px; line-height:1.75; color:var(--txt);}
+  #r_btnCopy{background:#2A2E33; color:var(--txt); border:1px solid var(--line);}
+  #r_btnShare{background:var(--acc); color:#1A1A1A;}
 </style>
 </head>
 <body>
@@ -125,14 +134,15 @@
 <header>
   <div class="tag">제작시안</div>
   <div class="tt">
-    <h1>제작시안 생성기</h1>
-    <p>디자인 그레이팅 · 철제 엣지 — 치수 입력 → 도면 PNG → 카톡 공유</p>
+    <h1>현장 도구</h1>
+    <p>그레이팅 · 철제엣지 시안 + 현장일보 — 카톡 공유</p>
   </div>
 </header>
 
 <nav class="tabs">
-  <button id="tabG" class="on" type="button">디자인 그레이팅</button>
-  <button id="tabE" type="button">철제 엣지 (ㄴ절곡)</button>
+  <button id="tabG" class="on" type="button">그레이팅</button>
+  <button id="tabE" type="button">철제엣지</button>
+  <button id="tabR" type="button">현장일보</button>
 </nav>
 
 <div id="pageG">
@@ -224,6 +234,54 @@
 <div class="bar">
   <button id="e_btnSave" type="button">PNG 저장</button>
   <button id="e_btnShare" type="button">카톡·공유</button>
+</div>
+</div>
+
+<div id="pageR" style="display:none">
+<main>
+  <div class="card">
+    <div class="switchRow"><h2 style="margin:0;">오늘 일보</h2><button id="r_btnPrev" type="button" class="chipbtn" style="flex:0 0 auto; padding:7px 14px; font-size:12px;">전일 복사</button></div>
+    <div class="grid">
+      <div class="fld"><label>날짜</label><input id="r_date" type="date"></div>
+      <div class="fld"><label>현장 (주소)</label><input id="r_site" type="text" placeholder="예) 김포 운양동1256-1"></div>
+      <div class="chips" id="r_c_site"></div>
+      <div class="fld full"><label>작업인원 (쉼표로 구분)</label><input id="r_crew" type="text" placeholder="예) 공철민,김규근,에스타일 5명"></div>
+      <div class="chips" id="r_c_crew"></div>
+      <div class="full seg" style="margin-top:2px;">
+        <button id="r_mFull" type="button" class="on">전체 일보</button>
+        <button id="r_mSimple" type="button">간단 (날짜·현장·인원)</button>
+      </div>
+      <div class="full" id="r_fullFields">
+        <div class="grid">
+          <div class="fld full"><label>작업장비</label><input id="r_equip" type="text" value="X"></div>
+          <div class="chips" id="r_c_equip"></div>
+          <div class="fld full"><label>농장자재</label><input id="r_mat" type="text" value="X"></div>
+          <div class="chips" id="r_c_mat"></div>
+          <div class="fld full"><label>작업내용</label><input id="r_work" type="text" placeholder="예) 타일 작업, 블럭작업, 가다 보강, 수전 교체 외"></div>
+          <div class="chips" id="r_c_work"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <h2>내일 일정</h2>
+    <div class="grid">
+      <div class="fld"><label>날짜</label><input id="r_tdate" type="date"></div>
+      <div class="fld"><label>현장</label><input id="r_tsite" type="text" placeholder="예) 용소리 508"></div>
+      <div class="chips" id="r_c_tsite"></div>
+      <div class="fld full"><label>인원</label><input id="r_tcrew" type="text" placeholder="예) 공철민,김규근,진영보도 2명"></div>
+      <div class="chips" id="r_c_tcrew"></div>
+    </div>
+    <p class="hint">내일 일정의 현장·인원은 내일 앱을 열면 오늘 일보에 자동 입력돼요.</p>
+  </div>
+  <div class="card">
+    <h2>미리보기</h2>
+    <pre id="r_out"></pre>
+  </div>
+</main>
+<div class="bar">
+  <button id="r_btnCopy" type="button">텍스트 복사</button>
+  <button id="r_btnShare" type="button">카톡·공유</button>
 </div>
 </div>
 
@@ -787,7 +845,188 @@
 (function(){
   "use strict";
   function $(id){ return document.getElementById(id); }
-  var pages = {G:$("pageG"), E:$("pageE")}, tabs = {G:$("tabG"), E:$("tabE")};
+  var DAYS = ["일","월","화","수","목","금","토"];
+  function iso(d){ return d.getFullYear()+"-"+("0"+(d.getMonth()+1)).slice(-2)+"-"+("0"+d.getDate()).slice(-2); }
+  function kdate(v){
+    if(!v) return "";
+    var p = v.split("-"), d = new Date(+p[0], +p[1]-1, +p[2]);
+    return (+p[1])+"월 "+(+p[2])+"일("+DAYS[d.getDay()]+")";
+  }
+  var today = new Date(), tmr = new Date(today.getTime() + 86400000);
+  $("r_date").value = iso(today);
+  $("r_tdate").value = iso(tmr);
+
+  var rMode = "full";
+  function setMode(m){
+    rMode = m;
+    $("r_mFull").classList.toggle("on", m === "full");
+    $("r_mSimple").classList.toggle("on", m === "simple");
+    $("r_fullFields").style.display = (m === "full") ? "" : "none";
+    render();
+  }
+  function build(){
+    var s = kdate($("r_date").value) + " " + $("r_site").value.trim() + "\n";
+    s += "-작업인원: " + ($("r_crew").value.trim() || "X");
+    if(rMode === "full"){
+      s += "\n-작업장비: " + ($("r_equip").value.trim() || "X") + "\n";
+      s += "-작업내용: " + ($("r_work").value.trim() || "X") + "\n";
+      s += "-농장자재: " + ($("r_mat").value.trim() || "X");
+    }
+    var ts = $("r_tsite").value.trim(), tc = $("r_tcrew").value.trim();
+    if(ts || tc){
+      s += "\n\n내일일정  " + kdate($("r_tdate").value) + "\n" + ts + (tc ? ": " + tc : "");
+    }
+    return s;
+  }
+  function render(){ $("r_out").textContent = build(); }
+  ["r_date","r_site","r_crew","r_equip","r_mat","r_work","r_tdate","r_tsite","r_tcrew"]
+    .forEach(function(id){ $(id).addEventListener("input", render); });
+
+  /* ── 기억 저장소 (필드별) ── */
+  function load(k){
+    var o; try{ o = JSON.parse(localStorage.getItem(k) || "{}"); }catch(e){ o = {}; }
+    Object.keys(o).forEach(function(x){ if(typeof o[x] === "number") o[x] = {n:o[x], t:0}; });
+    return o;
+  }
+  function save(k, o){ try{ localStorage.setItem(k, JSON.stringify(o)); }catch(e){} }
+  function bump(k, tokens){
+    var o = load(k), now = Date.now();
+    tokens.forEach(function(t){
+      t = t.trim();
+      if(t.length < 1 || t.length > 40) return;
+      if(t === "X" || t === "x") return;
+      if(!o[t]) o[t] = {n:0, t:0};
+      o[t].n++; o[t].t = now;
+    });
+    var keys = Object.keys(o);
+    if(keys.length > 30){
+      keys.sort(function(a,b){ return o[a].t - o[b].t; })
+          .slice(0, keys.length - 30)
+          .forEach(function(x){ delete o[x]; });
+    }
+    save(k, o);
+  }
+  /* mode: "set" 값 교체(현장) / "append" 쉼표 추가(인원·장비 등)
+     sortBy: "t" 최근순(현장) / "n" 빈도순 */
+  var CHIP_DEFS = [
+    ["r_c_site",  "rb_site",  "r_site",  "set",    "t"],
+    ["r_c_crew",  "rb_names", "r_crew",  "append", "n"],
+    ["r_c_equip", "rb_equip", "r_equip", "append", "n"],
+    ["r_c_mat",   "rb_mat",   "r_mat",   "append", "n"],
+    ["r_c_work",  "rb_work",  "r_work",  "append", "n"],
+    ["r_c_tsite", "rb_site",  "r_tsite", "set",    "t"],
+    ["r_c_tcrew", "rb_names", "r_tcrew", "append", "n"]
+  ];
+  function renderChips(){
+    CHIP_DEFS.forEach(function(def){
+      var elId = def[0], key = def[1], inputId = def[2], mode = def[3], sortBy = def[4];
+      var o = load(key);
+      var keys = Object.keys(o).sort(function(a,b){
+        return sortBy === "t" ? (o[b].t - o[a].t) : (o[b].n - o[a].n || o[b].t - o[a].t);
+      }).slice(0, 8);
+      var el = $(elId); el.innerHTML = "";
+      keys.forEach(function(n){
+        var b = document.createElement("button");
+        b.type = "button";
+        b.textContent = (mode === "set" ? "" : "+ ") + n;
+        b.addEventListener("click", function(){
+          var inp = $(inputId);
+          if(mode === "set"){ inp.value = n; }
+          else{
+            var v = inp.value.trim();
+            var base = (v === "X" || v === "x") ? "" : v;
+            var arr = base ? base.split(",").map(function(x){ return x.trim(); }).filter(Boolean) : [];
+            if(arr.indexOf(n) < 0) arr.push(n);
+            inp.value = arr.join(",");
+          }
+          render();
+        });
+        el.appendChild(b);
+      });
+    });
+  }
+  function learn(){
+    bump("rb_site",  [$("r_site").value, $("r_tsite").value]);
+    bump("rb_names", ($("r_crew").value + "," + $("r_tcrew").value).split(","));
+    bump("rb_equip", $("r_equip").value.split(","));
+    bump("rb_mat",   $("r_mat").value.split(","));
+    bump("rb_work",  $("r_work").value.split(","));
+  }
+
+  /* ── 내일일정 → 다음날 자동 입력 ── */
+  try{
+    var plan = JSON.parse(localStorage.getItem("rb_plan") || "null");
+    if(plan && plan.date === iso(today)){
+      if(plan.site && !$("r_site").value) $("r_site").value = plan.site;
+      if(plan.crew && !$("r_crew").value) $("r_crew").value = plan.crew;
+    }
+  }catch(e){}
+  function savePlan(){
+    try{
+      localStorage.setItem("rb_plan", JSON.stringify({
+        date: $("r_tdate").value, site: $("r_tsite").value.trim(), crew: $("r_tcrew").value.trim()
+      }));
+    }catch(e){}
+  }
+
+  /* ── 전일 복사 ── */
+  function saveReport(){
+    try{
+      localStorage.setItem("rb_lastreport", JSON.stringify({
+        site: $("r_site").value, crew: $("r_crew").value,
+        equip: $("r_equip").value, mat: $("r_mat").value, work: $("r_work").value
+      }));
+    }catch(e){}
+  }
+  $("r_btnPrev").addEventListener("click", function(){
+    var r = null;
+    try{ r = JSON.parse(localStorage.getItem("rb_lastreport") || "null"); }catch(e){}
+    if(!r){ toastR("저장된 전일 일보가 없어요"); return; }
+    $("r_site").value = r.site || ""; $("r_crew").value = r.crew || "";
+    $("r_equip").value = r.equip || "X"; $("r_mat").value = r.mat || "X";
+    $("r_work").value = r.work || "";
+    render(); toastR("전일 일보 불러옴 — 바뀐 것만 수정하세요");
+  });
+
+  function finalize(){ learn(); savePlan(); saveReport(); renderChips(); }
+
+  function toastR(m){
+    var t = document.getElementById("toast");
+    t.textContent = m; t.classList.add("show");
+    clearTimeout(t._tm); t._tm = setTimeout(function(){ t.classList.remove("show"); }, 2200);
+  }
+  function fallbackCopy(txt){
+    var ta = document.createElement("textarea");
+    ta.value = txt; document.body.appendChild(ta); ta.select();
+    try{ document.execCommand("copy"); toastR("복사 완료 — 카톡에 붙여넣기"); }
+    catch(e){ toastR("복사 실패 — 미리보기를 길게 눌러 복사하세요"); }
+    ta.remove();
+  }
+  $("r_btnCopy").addEventListener("click", function(){
+    var txt = build(); finalize();
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(txt).then(
+        function(){ toastR("복사 완료 — 카톡에 붙여넣기"); },
+        function(){ fallbackCopy(txt); });
+    }else fallbackCopy(txt);
+  });
+  $("r_btnShare").addEventListener("click", function(){
+    var txt = build(); finalize();
+    if(navigator.share){ navigator.share({text: txt}).catch(function(){}); }
+    else toastR("공유 미지원 — 텍스트 복사를 이용하세요");
+  });
+
+  $("r_mFull").addEventListener("click", function(){ setMode("full"); });
+  $("r_mSimple").addEventListener("click", function(){ setMode("simple"); });
+
+  renderChips(); render();
+})();
+</script>
+<script>
+(function(){
+  "use strict";
+  function $(id){ return document.getElementById(id); }
+  var pages = {G:$("pageG"), E:$("pageE"), R:$("pageR")}, tabs = {G:$("tabG"), E:$("tabE"), R:$("tabR")};
   function show(k){
     Object.keys(pages).forEach(function(x){
       pages[x].style.display = (x===k) ? "" : "none";
@@ -797,6 +1036,7 @@
   }
   $("tabG").addEventListener("click", function(){ show("G"); });
   $("tabE").addEventListener("click", function(){ show("E"); });
+  $("tabR").addEventListener("click", function(){ show("R"); });
 
   /* 현장명·회사명 두 탭 동기화 */
   function link(a, b){
@@ -816,7 +1056,7 @@
   persist(gS, "fab_site"); persist(gC, "fab_co");
 
   var t=null; try{ t = localStorage.getItem("fab_tab"); }catch(e){}
-  show(t === "E" ? "E" : "G");
+  show(t === "E" || t === "R" ? t : "G");
 })();
 </script>
 </body>
