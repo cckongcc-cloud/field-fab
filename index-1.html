@@ -1,0 +1,1063 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#16181B">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="data:application/manifest+json,%7B%22name%22%3A%22%EC%A0%9C%EC%9E%91%EC%8B%9C%EC%95%88%20%EC%83%9D%EC%84%B1%EA%B8%B0%22%2C%22short_name%22%3A%22%EC%A0%9C%EC%9E%91%EC%8B%9C%EC%95%88%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%2316181B%22%2C%22theme_color%22%3A%22%2316181B%22%2C%22start_url%22%3A%22.%22%7D">
+<title>제작시안 생성기</title>
+<style>
+:root{
+    --bg:#16181B; --panel:#1F2226; --line:#34383D; --txt:#E8E6E1; --sub:#9AA0A6;
+    --acc:#F2B838; --red:#D6453A;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  body{margin:0; background:var(--bg); color:var(--txt);
+    font-family:'Pretendard','Malgun Gothic','Apple SD Gothic Neo',system-ui,sans-serif;
+    padding-bottom:92px;}
+  header{display:flex; align-items:stretch; border-bottom:2px solid var(--acc); background:var(--panel);}
+  header .tag{background:var(--acc); color:#1A1A1A; font-weight:800; font-size:11px;
+    writing-mode:vertical-rl; text-orientation:upright; letter-spacing:2px;
+    display:flex; align-items:center; padding:6px 4px;}
+  header .tt{padding:12px 14px;}
+  header h1{margin:0; font-size:17px; font-weight:800; letter-spacing:-0.3px;}
+  header p{margin:3px 0 0; font-size:12px; color:var(--sub);}
+  .panel{padding:14px 14px 6px; display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+  .field{display:flex; flex-direction:column; gap:5px;}
+  .field.full{grid-column:1 / -1;}
+  label{font-size:12px; color:var(--sub); font-weight:600;}
+  label b{color:var(--acc); font-weight:700;}
+  input{background:#15171A; border:1px solid var(--line); color:var(--txt);
+    border-radius:8px; padding:11px 12px; font-size:16px; width:100%; outline:none;}
+  input:focus{border-color:var(--acc);}
+  input::placeholder{color:#5C6168;}
+  .row{display:flex; gap:8px; align-items:center;}
+  .chipbtn{flex:1; border:1px solid var(--line); background:#15171A; color:var(--sub);
+    border-radius:8px; padding:11px 12px; font-size:13px; font-weight:700;}
+  .chipbtn.on{background:var(--acc); border-color:var(--acc); color:#1A1A1A;}
+  .calc{grid-column:1 / -1; font-size:12.5px; color:var(--sub); background:#15171A;
+    border:1px dashed var(--line); border-radius:8px; padding:9px 12px;}
+  .calc b{color:var(--txt);}
+  .calc.warn{border-color:var(--red); color:var(--red);}
+  .preview{padding:12px 14px 4px;}
+  .preview .cap{font-size:11px; color:var(--sub); margin:0 0 6px 2px; letter-spacing:1px;}
+  #g_sheetWrap{background:#fff; border-radius:10px; overflow:hidden; box-shadow:0 4px 18px rgba(0,0,0,.45);}
+  #g_sheetWrap svg{display:block; width:100%; height:auto;}
+  .actions{position:fixed; left:0; right:0; bottom:0; display:flex; gap:10px;
+    padding:12px 14px calc(12px + env(safe-area-inset-bottom)); background:rgba(22,24,27,.96);
+    border-top:1px solid var(--line); backdrop-filter:blur(6px);}
+  .actions button{flex:1; border:none; border-radius:10px; padding:14px 0;
+    font-size:15px; font-weight:800; letter-spacing:.5px;}
+  #g_btnSave{background:var(--acc); color:#1A1A1A;}
+  #g_btnShare{background:#2A2E33; color:var(--txt); border:1px solid var(--line);}
+  .actions button:active{transform:scale(.98);}
+  #toast{position:fixed; left:50%; bottom:96px; transform:translateX(-50%) translateY(10px);
+    background:#000; color:#fff; font-size:13px; padding:10px 16px; border-radius:20px;
+    opacity:0; pointer-events:none; transition:all .25s; white-space:nowrap; z-index:99;}
+  #toast.show{opacity:.92; transform:translateX(-50%) translateY(0);}
+  @media (min-width:760px){
+    body{max-width:880px; margin:0 auto;}
+    .panel{grid-template-columns:repeat(4,1fr);}
+    .field.full{grid-column:span 2;}
+    .calc{grid-column:1 / -1;}
+  }
+
+  /* ── 탭 ── */
+  .tabs{display:flex; position:sticky; top:0; z-index:5; background:var(--bg);
+    border-bottom:1px solid var(--line);}
+  .tabs button{flex:1; background:none; border:none; color:var(--sub); font-size:14px;
+    font-weight:800; padding:13px 4px; border-bottom:3px solid transparent; letter-spacing:-0.3px;}
+  .tabs button.on{color:var(--acc); border-bottom-color:var(--acc);}
+  /* ── 철제엣지 모듈 ── */
+  main{padding:12px; max-width:560px; margin:0 auto;}
+.card{background:var(--panel); border:1px solid var(--line); border-radius:12px;
+    padding:12px; margin-bottom:12px;}
+  .card h2{margin:0 0 10px; font-size:12px; font-weight:700; color:var(--acc);
+    letter-spacing:1px;}
+  .grid{display:grid; grid-template-columns:1fr 1fr; gap:8px;}
+  .grid3{display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px;}
+  .fld label{display:block; font-size:11px; color:var(--sub); margin-bottom:4px;}
+  .fld input{width:100%; background:#15171A; border:1px solid var(--line); border-radius:8px;
+    color:var(--txt); font-size:16px; padding:9px 10px; font-weight:600;}
+  .fld input:focus{outline:none; border-color:var(--acc);}
+  .full{grid-column:1 / -1;}
+
+  .seg{display:flex; gap:6px;}
+  .seg button{flex:1; background:#15171A; border:1px solid var(--line); color:var(--sub);
+    border-radius:8px; padding:10px 4px; font-size:13px; font-weight:700;}
+  .seg button.on{background:var(--acc); border-color:var(--acc); color:#1A1A1A;}
+
+  .switchRow{display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;}
+  .switchRow span{font-size:13px; font-weight:700;}
+  .sw{width:48px; height:28px; border-radius:14px; background:#15171A; border:1px solid var(--line);
+    position:relative; transition:background .15s;}
+  .sw::after{content:""; position:absolute; top:3px; left:3px; width:20px; height:20px;
+    border-radius:50%; background:var(--sub); transition:left .15s, background .15s;}
+  .sw.on{background:var(--acc);}
+  .sw.on::after{left:23px; background:#1A1A1A;}
+
+  .hint{font-size:11px; color:var(--sub); margin:6px 0 0; line-height:1.5;}
+  #e_sum{font-size:12.5px; color:var(--txt); background:#15171A; border:1px dashed var(--line);
+    border-radius:8px; padding:8px 10px; margin-top:10px; line-height:1.6;}
+  #e_sum b{color:var(--acc);}
+
+  #e_wrap{background:#fff; border-radius:12px; overflow:hidden; border:1px solid var(--line);}
+  #e_wrap svg{display:block; width:100%; height:auto;}
+
+  .bar{position:fixed; left:0; right:0; bottom:0; display:flex; gap:8px;
+    padding:10px 12px calc(10px + env(safe-area-inset-bottom)); background:rgba(22,24,27,.96);
+    border-top:1px solid var(--line); backdrop-filter:blur(6px);}
+  .bar button{flex:1; border:none; border-radius:10px; padding:14px 6px;
+    font-size:15px; font-weight:800;}
+  #e_btnSave{background:#2A2E33; color:var(--txt); border:1px solid var(--line);}
+  #e_btnShare{background:var(--acc); color:#1A1A1A;}
+
+  #toast{position:fixed; left:50%; bottom:110px; transform:translateX(-50%);
+    background:#000; color:#fff; font-size:13px; padding:9px 16px; border-radius:20px;
+    opacity:0; transition:opacity .2s; pointer-events:none; white-space:nowrap; z-index:9;}
+  /* ── 현장일보 ── */
+  .chips{grid-column:1 / -1; display:flex; flex-wrap:wrap; gap:6px;}
+  .chips button{background:#15171A; border:1px solid var(--line); color:var(--sub);
+    border-radius:14px; padding:7px 12px; font-size:12.5px; font-weight:700;}
+  .chips button:active{border-color:var(--acc); color:var(--acc);}
+  #r_out{margin:0; white-space:pre-wrap; word-break:break-all; font-family:inherit;
+    font-size:14.5px; line-height:1.75; color:var(--txt);}
+  #r_btnCopy{background:#2A2E33; color:var(--txt); border:1px solid var(--line);}
+  #r_btnShare{background:var(--acc); color:#1A1A1A;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="tag">제작시안</div>
+  <div class="tt">
+    <h1>현장 도구</h1>
+    <p>그레이팅 · 철제엣지 시안 + 현장일보 — 카톡 공유</p>
+  </div>
+</header>
+
+<nav class="tabs">
+  <button id="tabG" class="on" type="button">그레이팅</button>
+  <button id="tabE" type="button">철제엣지</button>
+  <button id="tabR" type="button">현장일보</button>
+</nav>
+
+<div id="pageG">
+<section class="panel">
+  <div class="field full">
+    <label>제작 유형</label>
+    <div class="row">
+      <button class="chipbtn on" id="g_btnTWing" type="button">날개형</button>
+      <button class="chipbtn" id="g_btnTBend" type="button">절곡형</button>
+    </div>
+  </div>
+  <div class="field"><label id="g_wLabel">안치수 가로 <b>W</b> (mm)</label><input id="g_inW" type="number" inputmode="decimal" placeholder="예) 375"></div>
+  <div class="field"><label id="g_hLabel">안치수 세로 <b>H</b> (mm)</label><input id="g_inH" type="number" inputmode="decimal" placeholder="예) 310"></div>
+  <div class="field" id="g_fWing"><label>날개 (mm)</label><input id="g_inWing" type="number" inputmode="decimal" placeholder="예) 25"></div>
+  <div class="field"><label id="g_legLabel">다리 길이 — 상판 제외 (mm)</label><input id="g_inLeg" type="number" inputmode="decimal" placeholder="예) 30"></div>
+  <div class="field"><label>수량 (EA)</label><input id="g_inQty" type="number" inputmode="numeric" placeholder="예) 1"></div>
+  <div class="field">
+    <label>용도</label>
+    <div class="row">
+      <button class="chipbtn on" id="g_btnRoad" type="button">차도용</button>
+      <button class="chipbtn" id="g_btnWalk" type="button">보도용</button>
+    </div>
+  </div>
+  <div class="field full"><label>현장명 (선택)</label><input id="g_inSite" type="text" placeholder="예) ○○현장 배수로"></div>
+  <div class="field full"><label>회사명 표기</label><input id="g_inCo" type="text" value="LIME PLACE"></div>
+  <div class="calc" id="g_calcBox">전체 치수 자동계산 : <b id="g_calcTxt">-</b></div>
+</section>
+
+<section class="preview">
+  <p class="cap">미리보기 — 비워두면 (&nbsp;&nbsp;&nbsp;&nbsp;)mm 공란 양식으로 출력됩니다</p>
+  <div id="g_sheetWrap"></div>
+</section>
+
+<div class="actions">
+  <button id="g_btnShare" type="button">공유 (카톡 등)</button>
+  <button id="g_btnSave" type="button">PNG 저장</button>
+</div>
+</div>
+
+<div id="pageE" style="display:none">
+<main>
+  <div class="card">
+    <h2>치수 (mm)</h2>
+    <div class="grid3">
+      <div class="fld"><label>높이 H</label><input id="e_inH" type="number" inputmode="decimal" value="100"></div>
+      <div class="fld"><label>플랜지 B</label><input id="e_inB" type="number" inputmode="decimal" value="70"></div>
+      <div class="fld"><label>두께 T</label><input id="e_inT" type="number" inputmode="decimal" value="4.5" step="0.5"></div>
+    </div>
+    <div class="grid" style="margin-top:8px;">
+      <div class="fld"><label>1본 길이 L</label><input id="e_inL" type="number" inputmode="numeric" value="2000"></div>
+      <div class="fld"><label>수량 (EA)</label><input id="e_inQty" type="number" inputmode="numeric" value="10"></div>
+    </div>
+    <div id="e_sum"></div>
+  </div>
+
+  <div class="card">
+    <div class="switchRow"><span>앵커홀 가공</span><div id="e_swHole" class="sw on"></div></div>
+    <div id="e_holeFlds" class="grid3">
+      <div class="fld"><label>홀 직경 Ø</label><input id="e_inHd" type="number" inputmode="decimal" value="10"></div>
+      <div class="fld"><label>홀 간격 @</label><input id="e_inHs" type="number" inputmode="numeric" value="300"></div>
+      <div class="fld"><label>끝단 여백</label><input id="e_inHe" type="number" inputmode="numeric" value="50"></div>
+    </div>
+    <p class="hint" id="e_holeHint"></p>
+  </div>
+
+  <div class="card">
+    <h2>마감</h2>
+    <div class="seg">
+      <button id="e_btnRaw" type="button">철판만 (무도장)</button>
+      <button id="e_btnPaint" type="button" class="on">도장 포함</button>
+    </div>
+    <div class="fld" id="e_fColor" style="margin-top:8px;">
+      <label>도장 색상</label><input id="e_inColor" type="text" value="흑색(먹색)">
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>표제란</h2>
+    <div class="grid">
+      <div class="fld"><label>현장명</label><input id="e_inSite" type="text" placeholder="예) 운양동 주택"></div>
+      <div class="fld"><label>발주자 / 회사</label><input id="e_inCo" type="text" placeholder="예) LIME PLACE"></div>
+      <div class="fld full"><label>비고 (특기사항)</label><input id="e_inNote" type="text" placeholder="예) 곡선 구간 별도 협의"></div>
+    </div>
+  </div>
+
+  <div id="e_wrap"></div>
+</main>
+
+<div class="bar">
+  <button id="e_btnSave" type="button">PNG 저장</button>
+  <button id="e_btnShare" type="button">카톡·공유</button>
+</div>
+</div>
+
+<div id="pageR" style="display:none">
+<main>
+  <div class="card">
+    <div class="switchRow"><h2 style="margin:0;">오늘 일보</h2><button id="r_btnPrev" type="button" class="chipbtn" style="flex:0 0 auto; padding:7px 14px; font-size:12px;">전일 복사</button></div>
+    <div class="grid">
+      <div class="fld"><label>날짜</label><input id="r_date" type="date"></div>
+      <div class="fld"><label>현장 (주소)</label><input id="r_site" type="text" placeholder="예) 김포 운양동1256-1"></div>
+      <div class="chips" id="r_c_site"></div>
+      <div class="fld full"><label>작업인원 (쉼표로 구분)</label><input id="r_crew" type="text" placeholder="예) 공철민,김규근,에스타일 5명"></div>
+      <div class="chips" id="r_c_crew"></div>
+      <div class="full seg" style="margin-top:2px;">
+        <button id="r_mFull" type="button" class="on">전체 일보</button>
+        <button id="r_mSimple" type="button">간단 (날짜·현장·인원)</button>
+      </div>
+      <div class="full" id="r_fullFields">
+        <div class="grid">
+          <div class="fld full"><label>작업장비</label><input id="r_equip" type="text" value="X"></div>
+          <div class="chips" id="r_c_equip"></div>
+          <div class="fld full"><label>농장자재</label><input id="r_mat" type="text" value="X"></div>
+          <div class="chips" id="r_c_mat"></div>
+          <div class="fld full"><label>작업내용</label><input id="r_work" type="text" placeholder="예) 타일 작업, 블럭작업, 가다 보강, 수전 교체 외"></div>
+          <div class="chips" id="r_c_work"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <h2>내일 일정</h2>
+    <div class="grid">
+      <div class="fld"><label>날짜</label><input id="r_tdate" type="date"></div>
+      <div class="fld"><label>현장</label><input id="r_tsite" type="text" placeholder="예) 용소리 508"></div>
+      <div class="chips" id="r_c_tsite"></div>
+      <div class="fld full"><label>인원</label><input id="r_tcrew" type="text" placeholder="예) 공철민,김규근,진영보도 2명"></div>
+      <div class="chips" id="r_c_tcrew"></div>
+    </div>
+    <p class="hint">내일 일정의 현장·인원은 내일 앱을 열면 오늘 일보에 자동 입력돼요.</p>
+  </div>
+  <div class="card">
+    <h2>미리보기</h2>
+    <pre id="r_out"></pre>
+  </div>
+</main>
+<div class="bar">
+  <button id="r_btnCopy" type="button">텍스트 복사</button>
+  <button id="r_btnShare" type="button">카톡·공유</button>
+</div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+(function(){
+  "use strict";
+  var $ = function(id){ return document.getElementById(id); };
+  var usage = "차도용";
+  var gType = "날개형";
+
+  /* ───────── 유틸 ───────── */
+  function num(v, def){ var n = parseFloat(v); return (isFinite(n) && n > 0) ? n : def; }
+  function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+  function estW(t){ var w=0,i; for(i=0;i<t.length;i++){ w += t.charCodeAt(i) > 255 ? 15 : 9; } return w; }
+  function today(){
+    var d=new Date(), p=function(n){return (n<10?"0":"")+n;};
+    return d.getFullYear()+"."+p(d.getMonth()+1)+"."+p(d.getDate());
+  }
+  function toast(msg){
+    var t=$("toast"); t.textContent=msg; t.classList.add("show");
+    clearTimeout(t._tm); t._tm=setTimeout(function(){t.classList.remove("show");},2200);
+  }
+
+  /* ───────── SVG 부품 ───────── */
+  var RED="#D6453A", CHIP_F="#FFE9A8", CHIP_S="#E3B93B", CHIP_T="#5C4500";
+
+  function chip(cx, cy, text){
+    var blank = !text;
+    var t = blank ? "" : text;
+    var w = blank ? 64 : Math.max(estW(t)+20, 46);
+    var h = 26;
+    var s = '<rect x="'+(cx-w/2)+'" y="'+(cy-h/2)+'" width="'+w+'" height="'+h+'" rx="6" fill="'+CHIP_F+'" stroke="'+CHIP_S+'" stroke-width="1.5"/>';
+    if(!blank){
+      s += '<text x="'+cx+'" y="'+(cy+5.5)+'" text-anchor="middle" font-size="16" font-weight="700" fill="'+CHIP_T+'">'+esc(t)+'</text>';
+    }
+    return s;
+  }
+  function arrowH(x, y, dir){
+    return '<polygon points="'+x+','+y+' '+(x-9*dir)+','+(y-3.6)+' '+(x-9*dir)+','+(y+3.6)+'" fill="'+RED+'"/>';
+  }
+  function arrowV(x, y, dir){
+    return '<polygon points="'+x+','+y+' '+(x-3.6)+','+(y-9*dir)+' '+(x+3.6)+','+(y-9*dir)+'" fill="'+RED+'"/>';
+  }
+  function hdim(x1, x2, y, yRef, label){
+    var s='';
+    s += '<line x1="'+x1+'" y1="'+yRef+'" x2="'+x1+'" y2="'+(y-6)+'" stroke="'+RED+'" stroke-width="1"/>';
+    s += '<line x1="'+x2+'" y1="'+yRef+'" x2="'+x2+'" y2="'+(y-6)+'" stroke="'+RED+'" stroke-width="1"/>';
+    s += '<line x1="'+x1+'" y1="'+y+'" x2="'+x2+'" y2="'+y+'" stroke="'+RED+'" stroke-width="1.4"/>';
+    s += arrowH(x1, y, -1) + arrowH(x2, y, 1);
+    s += chip((x1+x2)/2, y, label ? label : "");
+    s += '<text x="'+((x1+x2)/2 + (label?estW(label)/2+12:44))+'" y="'+(y+5)+'" font-size="13" fill="'+RED+'">mm</text>';
+    return s;
+  }
+  function vdim(y1, y2, x, xRef, label){
+    var s='';
+    s += '<line x1="'+xRef+'" y1="'+y1+'" x2="'+(x+6)+'" y2="'+y1+'" stroke="'+RED+'" stroke-width="1"/>';
+    s += '<line x1="'+xRef+'" y1="'+y2+'" x2="'+(x+6)+'" y2="'+y2+'" stroke="'+RED+'" stroke-width="1"/>';
+    s += '<line x1="'+x+'" y1="'+y1+'" x2="'+x+'" y2="'+y2+'" stroke="'+RED+'" stroke-width="1.4"/>';
+    s += arrowV(x, y1, -1) + arrowV(x, y2, 1);
+    s += chip(x, (y1+y2)/2, label ? label : "");
+    s += '<text x="'+x+'" y="'+((y1+y2)/2 + 26)+'" text-anchor="middle" font-size="12" fill="'+RED+'">mm</text>';
+    return s;
+  }
+  function slats(qx, qy, qw, qh, vertical){
+    var s='', i, n=4;
+    if(vertical){
+      var sw = qw*0.10;
+      for(i=0;i<n;i++){
+        var cx = qx + (i+0.5)*(qw/n);
+        s += '<rect x="'+(cx-sw/2)+'" y="'+qy+'" width="'+sw+'" height="'+qh+'" rx="2.5" fill="#DCDCD8"/>';
+      }
+    }else{
+      var sh = qh*0.10;
+      for(i=0;i<n;i++){
+        var cy = qy + (i+0.5)*(qh/n);
+        s += '<rect x="'+qx+'" y="'+(cy-sh/2)+'" width="'+qw+'" height="'+sh+'" rx="2.5" fill="#DCDCD8"/>';
+      }
+    }
+    return s;
+  }
+  function pattern(x, y, w, h, guide){
+    var s='';
+    var pad = Math.min(w, h)*0.085;
+    var px=x+pad, py=y+pad, pW=w-2*pad, pH=h-2*pad;
+    var gap = Math.min(pW,pH)*0.055;
+    var qw=(pW-gap)/2, qh=(pH-gap)/2;
+    s += slats(px,        py,        qw, qh, true );
+    s += slats(px+qw+gap, py,        qw, qh, false);
+    s += slats(px,        py+qh+gap, qw, qh, false);
+    s += slats(px+qw+gap, py+qh+gap, qw, qh, true );
+    if(guide){
+      s += '<rect x="'+(px-6)+'" y="'+(py-6)+'" width="'+(pW+12)+'" height="'+(pH+12)+'" fill="none" stroke="#5B9BD5" stroke-width="1.6" stroke-dasharray="3 4"/>';
+    }
+    return s;
+  }
+
+  /* ───────── 시트 렌더 ───────── */
+  function render(){
+    var isWing = (gType === "날개형");
+    var wg  = num($("g_inWing").value, 25),
+        leg = num($("g_inLeg").value,  30);
+    var hasW=$("g_inW").value, hasH=$("g_inH").value, hasWg=$("g_inWing").value, hasLeg=$("g_inLeg").value;
+    var qty = $("g_inQty").value, site=$("g_inSite").value.trim(), co=$("g_inCo").value.trim();
+
+    /* 날개형: 안치수 입력 → 전체 = 안치수 + 날개×2 / 절곡형: 전체 직접 입력 */
+    var W, H, iW, iH;
+    if(isWing){
+      iW = num($("g_inW").value, 375);
+      iH = num($("g_inH").value, 310);
+      W = iW + 2*wg;
+      H = iH + 2*wg;
+    }else{
+      W = num($("g_inW").value, 425);
+      H = num($("g_inH").value, 360);
+    }
+    var cb=$("g_calcBox");
+    if(isWing){
+      cb.style.display="";
+      $("g_calcTxt").textContent = (hasW && hasH && hasWg) ? W+" × "+H+" mm  (안치수 + 날개×2)" : "-";
+    }else{
+      cb.style.display="none";
+    }
+
+    /* 스케일 */
+    var s = Math.min(430/W, 360/H);
+    var pw = W*s, ph = H*s, wgp = wg*s;
+    var cx0 = 545, cy0 = 408;
+    var ox = cx0-pw/2, oy = cy0-ph/2, ox2 = ox+pw, oy2 = oy+ph;
+    var ix = ox+wgp, iy = oy+wgp, ix2 = ox2-wgp, iy2 = oy2-wgp;
+
+    var svg = '';
+
+    /* 표제란 */
+    svg += '<rect x="42" y="40" width="9" height="36" fill="#8BC34A"/>';
+    svg += '<text x="62" y="67" font-size="27" font-weight="800" fill="#2B2B2B">디자인 그레이팅 ( '+gType+' )</text>';
+    if(isWing){
+      svg += '<text x="64" y="116" font-size="20" font-weight="700" fill="#2B2B2B">날개</text>' + chip(150,110,hasWg?String(wg):"") + '<text x="196" y="116" font-size="16" fill="#555">mm</text>';
+      svg += '<text x="64" y="156" font-size="20" font-weight="700" fill="#2B2B2B">다리</text>' + chip(150,150,hasLeg?String(leg):"") + '<text x="196" y="156" font-size="16" fill="#555">mm</text>';
+    }else{
+      svg += '<text x="64" y="116" font-size="20" font-weight="700" fill="#2B2B2B">절곡</text>' + chip(150,110,hasLeg?String(leg):"") + '<text x="196" y="116" font-size="16" fill="#555">mm</text>';
+      svg += '<text x="64" y="152" font-size="14" fill="#8A8A8A">단부 절곡 가공 · 날개 없음</text>';
+    }
+    var meta = (site?site+"  ·  ":"") + today();
+    svg += '<text x="64" y="192" font-size="15" fill="#8A8A8A">'+esc(meta)+'</text>';
+
+    if(isWing){
+      /* ── 날개형 평면도 ── */
+      svg += '<rect x="'+ox+'" y="'+oy+'" width="'+pw+'" height="'+ph+'" rx="5" fill="#5C6166"/>';
+      svg += '<rect x="'+ix+'" y="'+iy+'" width="'+(pw-2*wgp)+'" height="'+(ph-2*wgp)+'" rx="3" fill="#3D4145"/>';
+      svg += pattern(ix, iy, pw-2*wgp, ph-2*wgp, true);
+      /* 치수선 */
+      svg += hdim(ox, ox2, oy-72, oy, (hasW&&hasWg)?String(W):"");
+      svg += hdim(ix, ix2, oy-30, iy, hasW?String(iW):"");
+      svg += vdim(oy, oy2, ox-76, ox, (hasH&&hasWg)?String(H):"");
+      svg += vdim(iy, iy2, ox-32, ix, hasH?String(iH):"");
+      /* 날개 표시 (우하단) */
+      var wy = oy2+24;
+      svg += '<line x1="'+ix2+'" y1="'+oy2+'" x2="'+ix2+'" y2="'+(wy+6)+'" stroke="'+RED+'" stroke-width="1"/>';
+      svg += '<line x1="'+ox2+'" y1="'+oy2+'" x2="'+ox2+'" y2="'+(wy+6)+'" stroke="'+RED+'" stroke-width="1"/>';
+      svg += '<line x1="'+(ix2-16)+'" y1="'+wy+'" x2="'+(ox2+16)+'" y2="'+wy+'" stroke="'+RED+'" stroke-width="1.2"/>';
+      svg += arrowH(ix2, wy, 1) + arrowH(ox2, wy, -1);
+      svg += '<text x="'+(ox2+24)+'" y="'+(wy+5)+'" font-size="14" fill="'+RED+'">날개 '+(hasWg?wg+"mm":"(    )mm")+'</text>';
+      svg += '<text x="'+cx0+'" y="'+(oy2+58)+'" text-anchor="middle" font-size="13" fill="#9A9A9A">평 면 도</text>';
+    }else{
+      /* ── 절곡형: 단부가 아래로 꺾여 내려간 입체 표현 ── */
+      var bd = Math.min(Math.max(leg*s, 14), 40), sk = bd*0.5;
+      /* 하단 절곡면 */
+      svg += '<polygon points="'+ox+','+oy2+' '+ox2+','+oy2+' '+(ox2+sk)+','+(oy2+bd)+' '+(ox+sk)+','+(oy2+bd)+'" fill="#26292C"/>';
+      /* 우측 절곡면 */
+      svg += '<polygon points="'+ox2+','+oy+' '+(ox2+sk)+','+(oy+bd)+' '+(ox2+sk)+','+(oy2+bd)+' '+ox2+','+oy2+'" fill="#31353A"/>';
+      /* 상판 */
+      svg += '<rect x="'+ox+'" y="'+oy+'" width="'+pw+'" height="'+ph+'" rx="2" fill="#3D4145"/>';
+      svg += pattern(ox+6, oy+6, pw-12, ph-12, false);
+      /* 절곡선(접힘 모서리 하이라이트) */
+      svg += '<line x1="'+ox+'" y1="'+oy2+'" x2="'+ox2+'" y2="'+oy2+'" stroke="#70767D" stroke-width="1.8"/>';
+      svg += '<line x1="'+ox2+'" y1="'+oy+'" x2="'+ox2+'" y2="'+oy2+'" stroke="#70767D" stroke-width="1.8"/>';
+      svg += hdim(ox, ox2, oy-50, oy, hasW?String(W):"");
+      svg += vdim(oy, oy2, ox-54, ox, hasH?String(H):"");
+      svg += '<text x="'+cx0+'" y="'+(oy2+bd+34)+'" text-anchor="middle" font-size="13" fill="#9A9A9A">제 품 형 상 ( 단부 절곡 )</text>';
+    }
+
+    /* 수량·용도 배지 */
+    var qtyTxt = qty ? qty+"EA" : "(   )EA";
+    svg += '<rect x="930" y="270" width="266" height="168" rx="12" fill="#FFD966"/>';
+    svg += '<text x="1063" y="340" text-anchor="middle" font-size="52" font-weight="800" fill="#222">'+esc(qtyTxt)+'</text>';
+    svg += '<text x="1063" y="408" text-anchor="middle" font-size="46" font-weight="800" fill="#222">'+esc(usage)+'</text>';
+
+    /* 측면도 */
+    var fy = 686;
+    if(isWing){
+      var fT = 8;                                        /* 상판(철판 T) — 도식 표현 */
+      var lh = Math.min(Math.max(leg*s, 12), 90);        /* 순수 다리 길이 */
+      svg += '<rect x="'+ox+'" y="'+fy+'" width="'+pw+'" height="'+fT+'" fill="#9AA0A5"/>';
+      svg += '<rect x="'+ix+'" y="'+(fy+fT)+'" width="'+(pw-2*wgp)+'" height="'+lh+'" fill="#3D4145"/>';
+      svg += vdim(fy+fT, fy+fT+lh, ox-32, ix, hasLeg?String(leg):"");
+      svg += '<text x="'+(ox2+14)+'" y="'+(fy+8)+'" font-size="13" fill="#8A8A8A">← 상판 철판두께(T) 별도</text>';
+      svg += '<text x="'+cx0+'" y="'+(fy+fT+lh+30)+'" text-anchor="middle" font-size="13" fill="#9A9A9A">측 면 도  ·  다리 길이는 상판 제외 순수 길이</text>';
+    }else{
+      /* ⊓ 형태: 상판 + 양 끝 절곡 다리 */
+      var pt = 8, lh = Math.min(Math.max(leg*s, 16), 90);
+      svg += '<rect x="'+ox+'" y="'+fy+'" width="'+pw+'" height="'+pt+'" fill="#3D4145"/>';
+      svg += '<rect x="'+ox+'" y="'+(fy+pt)+'" width="'+pt+'" height="'+lh+'" fill="#3D4145"/>';
+      svg += '<rect x="'+(ox2-pt)+'" y="'+(fy+pt)+'" width="'+pt+'" height="'+lh+'" fill="#3D4145"/>';
+      svg += vdim(fy+pt, fy+pt+lh, ox-32, ox, hasLeg?String(leg):"");
+      svg += '<text x="'+(ox2+16)+'" y="'+(fy+8)+'" font-size="13" fill="#8A8A8A">← 상판 철판두께(T) 별도</text>';
+      svg += '<text x="'+(ox2+16)+'" y="'+(fy+pt+lh-2)+'" font-size="13" fill="#8A8A8A">← 단부 절곡</text>';
+      svg += '<text x="'+cx0+'" y="'+(fy+pt+lh+30)+'" text-anchor="middle" font-size="13" fill="#9A9A9A">측 면 도  ·  절곡 깊이는 상판 제외 순수 길이</text>';
+    }
+
+    /* 회사명 */
+    if(co){
+      svg += '<text x="1196" y="788" text-anchor="end" font-size="24" font-weight="800" fill="#6B7A45" letter-spacing="2">'+esc(co)+'</text>';
+    }
+
+    var out = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1240 820" '+
+      'font-family="\'Malgun Gothic\',\'Apple SD Gothic Neo\',sans-serif">'+
+      '<rect width="1240" height="820" fill="#FFFFFF"/>'+ svg + '</svg>';
+    $("g_sheetWrap").innerHTML = out;
+  }
+
+  /* ───────── PNG 변환 ───────── */
+  function toPng(cb){
+    var svgEl = $("g_sheetWrap").querySelector("svg");
+    var xml = new XMLSerializer().serializeToString(svgEl);
+    var img = new Image();
+    img.onload = function(){
+      var sc = 2.4;
+      var cv = document.createElement("canvas");
+      cv.width = 1240*sc; cv.height = 820*sc;
+      var ctx = cv.getContext("2d");
+      ctx.fillStyle = "#FFFFFF"; ctx.fillRect(0,0,cv.width,cv.height);
+      ctx.drawImage(img, 0, 0, cv.width, cv.height);
+      cv.toBlob(function(blob){ cb(blob); }, "image/png");
+    };
+    img.onerror = function(){ toast("이미지 변환 실패. 다시 시도해 주세요."); };
+    img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(xml);
+  }
+  function fileName(){
+    var site = $("g_inSite").value.trim();
+    return "그레이팅시안_"+gType+"_" + (site ? site.replace(/[\\/:*?"<>|\s]+/g,"_") : today()) + ".png";
+  }
+
+  $("g_btnSave").addEventListener("click", function(){
+    toPng(function(blob){
+      var a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = fileName();
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function(){ URL.revokeObjectURL(a.href); }, 4000);
+      toast("PNG 저장 완료");
+    });
+  });
+
+  $("g_btnShare").addEventListener("click", function(){
+    toPng(function(blob){
+      var f = new File([blob], fileName(), {type:"image/png"});
+      if(navigator.canShare && navigator.canShare({files:[f]})){
+        navigator.share({files:[f], title:"그레이팅 제작시안"}).catch(function(){});
+      }else{
+        toast("이 브라우저는 공유 미지원 → PNG 저장을 이용하세요");
+      }
+    });
+  });
+
+  /* ───────── 토글 ───────── */
+  function setType(t){
+    gType = t;
+    var w = (t==="날개형");
+    $("g_btnTWing").classList.toggle("on", w);
+    $("g_btnTBend").classList.toggle("on", !w);
+    $("g_fWing").style.display = w ? "" : "none";
+    $("g_legLabel").textContent = w ? "다리 길이 — 상판 제외 (mm)" : "절곡 깊이 — 상판 제외 (mm)";
+    $("g_wLabel").innerHTML = w ? '안치수 가로 <b>W</b> (mm)' : '전체 가로 <b>W</b> (mm)';
+    $("g_hLabel").innerHTML = w ? '안치수 세로 <b>H</b> (mm)' : '전체 세로 <b>H</b> (mm)';
+    $("g_inW").placeholder = w ? "예) 375" : "예) 425";
+    $("g_inH").placeholder = w ? "예) 310" : "예) 360";
+    render();
+  }
+  $("g_btnTWing").addEventListener("click", function(){ setType("날개형"); });
+  $("g_btnTBend").addEventListener("click", function(){ setType("절곡형"); });
+
+  function setUsage(u){
+    usage = u;
+    $("g_btnRoad").classList.toggle("on", u==="차도용");
+    $("g_btnWalk").classList.toggle("on", u==="보도용");
+    render();
+  }
+  $("g_btnRoad").addEventListener("click", function(){ setUsage("차도용"); });
+  $("g_btnWalk").addEventListener("click", function(){ setUsage("보도용"); });
+
+  ["g_inW","g_inH","g_inWing","g_inLeg","g_inQty","g_inSite","g_inCo"].forEach(function(id){
+    $(id).addEventListener("input", render);
+  });
+
+  render();
+})();
+</script>
+<script>
+(function(){
+  "use strict";
+  function $(id){ return document.getElementById(id); }
+  function toast(msg){
+    var t = $("toast"); t.textContent = msg; t.style.opacity = 1;
+    clearTimeout(t._tm); t._tm = setTimeout(function(){ t.style.opacity = 0; }, 2200);
+  }
+  function today(){
+    var d = new Date();
+    return d.getFullYear()+"."+("0"+(d.getMonth()+1)).slice(-2)+"."+("0"+d.getDate()).slice(-2);
+  }
+  function fmt(n){ return Number(n).toLocaleString("ko-KR"); }
+  function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+
+  var holeOn = true;
+  var finish = "도장";
+
+  function vals(){
+    return {
+      H: parseFloat($("e_inH").value) || 0,
+      B: parseFloat($("e_inB").value) || 0,
+      T: parseFloat($("e_inT").value) || 0,
+      L: parseFloat($("e_inL").value) || 0,
+      qty: parseInt($("e_inQty").value, 10) || 0,
+      hd: parseFloat($("e_inHd").value) || 0,
+      hs: parseFloat($("e_inHs").value) || 0,
+      he: parseFloat($("e_inHe").value) || 0,
+      site: $("e_inSite").value.trim(),
+      co: $("e_inCo").value.trim(),
+      note: $("e_inNote").value.trim(),
+      color: $("e_inColor").value.trim()
+    };
+  }
+  function holeCount(v){
+    if(!holeOn || v.hs <= 0 || v.L <= 2*v.he) return 0;
+    return Math.floor((v.L - 2*v.he) / v.hs) + 1;
+  }
+  function finishTxt(v){
+    return finish === "도장" ? "일반철판 + 도장" + (v.color ? "(" + v.color + ")" : "") : "일반철판 (무도장)";
+  }
+
+  /* ───────── 치수선 헬퍼 ───────── */
+  var DIM = "#1a56a8", LN = "#111";
+  function arrowH(x, y, dir){ // dir 1 → 오른쪽 화살촉
+    return '<path d="M'+x+','+y+' l'+(8*dir)+',-3 l0,6 z" fill="'+DIM+'"/>';
+  }
+  function arrowV(x, y, dir){ // dir 1 → 아래 화살촉
+    return '<path d="M'+x+','+y+' l-3,'+(-8*dir)+' l6,0 z" fill="'+DIM+'"/>';
+  }
+  function dimH(x1, x2, y, label, ext1, ext2){
+    var s = "";
+    if(ext1 !== undefined) s += '<line x1="'+x1+'" y1="'+ext1+'" x2="'+x1+'" y2="'+(y+4)+'" stroke="'+DIM+'" stroke-width="0.8"/>';
+    if(ext2 !== undefined) s += '<line x1="'+x2+'" y1="'+ext2+'" x2="'+x2+'" y2="'+(y+4)+'" stroke="'+DIM+'" stroke-width="0.8"/>';
+    s += '<line x1="'+x1+'" y1="'+y+'" x2="'+x2+'" y2="'+y+'" stroke="'+DIM+'" stroke-width="1"/>';
+    s += arrowH(x1, y, 1) + arrowH(x2, y, -1);
+    s += '<text x="'+((x1+x2)/2)+'" y="'+(y-5)+'" font-size="14" fill="'+DIM+'" text-anchor="middle" font-weight="700">'+label+'</text>';
+    return s;
+  }
+  function dimV(y1, y2, x, label, ext1, ext2){
+    var s = "";
+    if(ext1 !== undefined) s += '<line x1="'+ext1+'" y1="'+y1+'" x2="'+(x-4)+'" y2="'+y1+'" stroke="'+DIM+'" stroke-width="0.8"/>';
+    if(ext2 !== undefined) s += '<line x1="'+ext2+'" y1="'+y2+'" x2="'+(x-4)+'" y2="'+y2+'" stroke="'+DIM+'" stroke-width="0.8"/>';
+    s += '<line x1="'+x+'" y1="'+y1+'" x2="'+x+'" y2="'+y2+'" stroke="'+DIM+'" stroke-width="1"/>';
+    s += arrowV(x, y1, -1) + arrowV(x, y2, 1);
+    s += '<text x="'+(x-8)+'" y="'+((y1+y2)/2)+'" font-size="14" fill="'+DIM+'" text-anchor="middle" font-weight="700" transform="rotate(-90 '+(x-8)+' '+((y1+y2)/2)+')">'+label+'</text>';
+    return s;
+  }
+
+  /* ───────── SVG 생성 ───────── */
+  var W = 820, HT = 1120;
+  function buildSVG(){
+    var v = vals();
+    var n = holeCount(v);
+    var totalM = (v.L * v.qty / 1000).toFixed(1);
+    var s = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '+W+' '+HT+'" font-family="Malgun Gothic, Apple SD Gothic Neo, sans-serif">';
+    s += '<rect width="'+W+'" height="'+HT+'" fill="#fff"/>';
+    s += '<defs><pattern id="hatch" width="8" height="8" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">'
+       + '<line x1="0" y1="0" x2="0" y2="8" stroke="#888" stroke-width="1.2"/></pattern></defs>';
+
+    /* ── 표제란 ── */
+    var tb = 24;
+    s += '<rect x="'+tb+'" y="'+tb+'" width="'+(W-2*tb)+'" height="118" fill="none" stroke="'+LN+'" stroke-width="2"/>';
+    s += '<line x1="'+tb+'" y1="'+(tb+52)+'" x2="'+(W-tb)+'" y2="'+(tb+52)+'" stroke="'+LN+'" stroke-width="1.2"/>';
+    s += '<text x="'+(W/2)+'" y="'+(tb+36)+'" font-size="26" font-weight="800" text-anchor="middle" fill="'+LN+'">철제 엣지 제작시안 ( ㄴ자 절곡형 )</text>';
+    var row1 = tb + 75, row2 = tb + 103;
+    s += '<text x="'+(tb+14)+'" y="'+row1+'" font-size="15" fill="'+LN+'">현장 : <tspan font-weight="700">'+esc(v.site || "-")+'</tspan></text>';
+    s += '<text x="'+(W/2)+'" y="'+row1+'" font-size="15" fill="'+LN+'">규격 : <tspan font-weight="700">H'+v.H+' × B'+v.B+' × T'+v.T+'</tspan></text>';
+    s += '<text x="'+(W-tb-14)+'" y="'+row1+'" font-size="15" fill="'+LN+'" text-anchor="end">'+today()+'</text>';
+    s += '<text x="'+(tb+14)+'" y="'+row2+'" font-size="15" fill="'+LN+'">수량 : <tspan font-weight="700">L'+fmt(v.L)+' × '+v.qty+'EA (합계 '+totalM+'M)</tspan></text>';
+    s += '<text x="'+(W/2)+'" y="'+row2+'" font-size="15" fill="'+LN+'">마감 : <tspan font-weight="700">'+esc(finishTxt(v))+'</tspan></text>';
+    s += '<text x="'+(W-tb-14)+'" y="'+row2+'" font-size="15" fill="'+LN+'" text-anchor="end">'+esc(v.co || "")+'</text>';
+
+    /* ── 단면도 ── */
+    var secTop = 186;
+    s += '<text x="'+tb+'" y="'+(secTop-14)+'" font-size="17" font-weight="800" fill="'+LN+'">■ 단면도 (SECTION)</text>';
+    var maxDisp = 250;
+    var sc = maxDisp / Math.max(v.H || 1, v.B || 1);
+    var dh = (v.H || 1) * sc, db = (v.B || 1) * sc;
+    var dt = Math.max((v.T || 1) * sc, 8); // 판두께 시각 과장(최소 8px)
+    var sx = 250, sy = secTop + 40;
+    // ㄴ자 외곽: 수직판 좌측, 플랜지 우측(안쪽) 방향
+    var p = [
+      [sx, sy], [sx+dt, sy], [sx+dt, sy+dh-dt],
+      [sx+db, sy+dh-dt], [sx+db, sy+dh], [sx, sy+dh]
+    ];
+    var d = "M" + p.map(function(pt){ return pt[0]+","+pt[1]; }).join(" L") + " Z";
+    s += '<path d="'+d+'" fill="url(#hatch)" stroke="'+LN+'" stroke-width="2.4" stroke-linejoin="miter"/>';
+    // 90° 표기 (내측 코너)
+    s += '<path d="M'+(sx+dt)+','+(sy+dh-dt-26)+' a26,26 0 0 1 26,26" fill="none" stroke="'+LN+'" stroke-width="1"/>';
+    s += '<text x="'+(sx+dt+32)+'" y="'+(sy+dh-dt-14)+'" font-size="13" fill="'+LN+'">90°</text>';
+    // 치수: H(좌), B(하), T(리더)
+    s += dimV(sy, sy+dh, sx-36, "H = "+v.H, sx, sx);
+    s += dimH(sx, sx+db, sy+dh+36, "B = "+v.B, sy+dh, sy+dh);
+    s += '<line x1="'+(sx+dt/2)+'" y1="'+(sy+16)+'" x2="'+(sx+dt+70)+'" y2="'+(sy-16)+'" stroke="'+DIM+'" stroke-width="1"/>';
+    s += '<circle cx="'+(sx+dt/2)+'" cy="'+(sy+16)+'" r="2.4" fill="'+DIM+'"/>';
+    s += '<text x="'+(sx+dt+76)+'" y="'+(sy-12)+'" font-size="14" fill="'+DIM+'" font-weight="700">철판두께 T = '+v.T+'</text>';
+    // 지면 표시 (플랜지가 바닥·안쪽 방향)
+    s += '<text x="'+(sx+db+26)+'" y="'+(sy+dh-6)+'" font-size="12.5" fill="#666">← 바닥 플랜지 (지면·안쪽 방향)</text>';
+
+    /* ── 평면도 ── */
+    var plTop = secTop + dh + 130;
+    s += '<text x="'+tb+'" y="'+plTop+'" font-size="17" font-weight="800" fill="'+LN+'">■ 평면도 (바닥 플랜지'+(holeOn ? " · 앵커홀" : "")+') — NTS</text>';
+    var px = 90, pw = W - px - 70, py = plTop + 78;
+    var pb = Math.max(Math.min(db, 90), 46); // 플랜지 표시폭
+    var gap = 26, segW = (pw - gap) / 2;
+    function flangeSeg(x, w, brL, brR){
+      var g = '<rect x="'+x+'" y="'+py+'" width="'+w+'" height="'+pb+'" fill="#f4f4f4" stroke="'+LN+'" stroke-width="2"/>';
+      // 수직판(절곡선): 상단 이중선
+      g += '<line x1="'+x+'" y1="'+(py+dt)+'" x2="'+(x+w)+'" y2="'+(py+dt)+'" stroke="'+LN+'" stroke-width="1.1" stroke-dasharray="7 4"/>';
+      if(brL) g += breakLine(x, py, pb);
+      if(brR) g += breakLine(x+w, py, pb);
+      return g;
+    }
+    function breakLine(x, y, h){
+      return '<path d="M'+x+','+(y-6)+' l-5,'+(h/2*0.5)+' l10,'+(h*0.25)+' l-5,'+(h/2*0.75+6)+'" fill="none" stroke="'+LN+'" stroke-width="1.6"/>';
+    }
+    s += flangeSeg(px, segW, false, true);
+    s += flangeSeg(px+segW+gap, segW, true, false);
+    s += '<text x="'+(px+segW+gap/2)+'" y="'+(py+pb/2+5)+'" font-size="13" fill="#666" text-anchor="middle">~</text>';
+    // 앵커홀
+    var cy = py + dt + (pb - dt)/2;
+    if(holeOn && n > 0){
+      var hr = 7;
+      var hx1 = px + 46, hx2 = hx1 + 92, hx3 = hx2 + 92;
+      var hxE = px + pw - 46;
+      [hx1,hx2,hx3].forEach(function(hx){
+        s += '<circle cx="'+hx+'" cy="'+cy+'" r="'+hr+'" fill="#fff" stroke="'+LN+'" stroke-width="1.8"/>';
+        s += '<line x1="'+(hx-hr-4)+'" y1="'+cy+'" x2="'+(hx+hr+4)+'" y2="'+cy+'" stroke="'+LN+'" stroke-width="0.7"/>';
+        s += '<line x1="'+hx+'" y1="'+(cy-hr-4)+'" x2="'+hx+'" y2="'+(cy+hr+4)+'" stroke="'+LN+'" stroke-width="0.7"/>';
+      });
+      s += '<circle cx="'+hxE+'" cy="'+cy+'" r="'+hr+'" fill="#fff" stroke="'+LN+'" stroke-width="1.8"/>';
+      s += '<line x1="'+(hxE-hr-4)+'" y1="'+cy+'" x2="'+(hxE+hr+4)+'" y2="'+cy+'" stroke="'+LN+'" stroke-width="0.7"/>';
+      s += '<line x1="'+hxE+'" y1="'+(cy-hr-4)+'" x2="'+hxE+'" y2="'+(cy+hr+4)+'" stroke="'+LN+'" stroke-width="0.7"/>';
+      // 치수: 끝단, @간격
+      s += dimH(px, hx1, py-22, ""+v.he, py, cy-10);
+      s += dimH(hx1, hx2, py-22, "@"+fmt(v.hs), cy-10, cy-10);
+      s += dimH(hxE, px+pw, py-22, ""+v.he, cy-10, py);
+      // Ø 리더
+      s += '<line x1="'+hx3+'" y1="'+(cy+hr)+'" x2="'+(hx3+46)+'" y2="'+(py+pb+30)+'" stroke="'+DIM+'" stroke-width="1"/>';
+      s += '<text x="'+(hx3+52)+'" y="'+(py+pb+36)+'" font-size="14" fill="'+DIM+'" font-weight="700">Ø'+v.hd+' 앵커홀 — '+n+'개소/본</text>';
+    }
+    // 전체 길이 L
+    var lY = py + pb + (holeOn && n>0 ? 66 : 40);
+    s += dimH(px, px+pw, lY, "L = "+fmt(v.L), py+pb, py+pb);
+
+    /* ── 특기사항 ── */
+    var ntTop = lY + 44;
+    s += '<rect x="'+tb+'" y="'+ntTop+'" width="'+(W-2*tb)+'" height="'+(HT-ntTop-tb)+'" fill="none" stroke="'+LN+'" stroke-width="1.4"/>';
+    s += '<text x="'+(tb+14)+'" y="'+(ntTop+28)+'" font-size="15" font-weight="800" fill="'+LN+'">※ 특기사항</text>';
+    var notes = [];
+    notes.push("1. 절곡 90°, 평면도는 NTS(비율 아님) — 치수 기준 제작.");
+    notes.push("2. 재질·마감 : " + finishTxt(v) + ".");
+    if(holeOn && n > 0) notes.push("3. 앵커홀 Ø"+v.hd+" — 본당 "+n+"개소 (@"+fmt(v.hs)+", 양끝단 "+v.he+").");
+    else notes.push("3. 앵커홀 가공 없음.");
+    if(v.note) notes.push("4. " + v.note);
+    notes.forEach(function(t, i){
+      s += '<text x="'+(tb+14)+'" y="'+(ntTop+56+i*26)+'" font-size="14" fill="'+LN+'">'+esc(t)+'</text>';
+    });
+
+    s += '</svg>';
+    return s;
+  }
+
+  function render(){
+    var v = vals();
+    $("e_wrap").innerHTML = buildSVG();
+    var n = holeCount(v);
+    var totalM = (v.L * v.qty / 1000).toFixed(1);
+    $("e_sum").innerHTML = "합계 <b>" + totalM + "M</b> ( L" + fmt(v.L) + " × " + v.qty + "EA )";
+    $("e_holeHint").textContent = holeOn
+      ? (n > 0 ? "본당 " + n + "개소 자동 계산 (@" + fmt(v.hs) + ", 양끝단 " + v.he + ")" : "치수 확인 필요 — 홀이 계산되지 않음")
+      : "";
+  }
+
+  /* ───────── PNG 저장·공유 ───────── */
+  function toPng(cb){
+    var xml = buildSVG();
+    var img = new Image();
+    img.onload = function(){
+      var c = document.createElement("canvas");
+      c.width = W * 2; c.height = HT * 2;
+      var ctx = c.getContext("2d");
+      ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, c.width, c.height);
+      ctx.drawImage(img, 0, 0, c.width, c.height);
+      c.toBlob(function(blob){
+        if(blob) cb(blob); else toast("이미지 생성 실패 — 다시 시도해 주세요");
+      }, "image/png");
+    };
+    img.onerror = function(){ toast("이미지 생성 실패 — 다시 시도해 주세요"); };
+    img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(xml);
+  }
+  function fileName(){
+    var site = $("e_inSite").value.trim();
+    return "철제엣지시안_" + (site ? site.replace(/[\\/:*?"<>|\s]+/g,"_") : today()) + ".png";
+  }
+  $("e_btnSave").addEventListener("click", function(){
+    toPng(function(blob){
+      var a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = fileName();
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function(){ URL.revokeObjectURL(a.href); }, 4000);
+      toast("PNG 저장 완료");
+    });
+  });
+  $("e_btnShare").addEventListener("click", function(){
+    toPng(function(blob){
+      var f = new File([blob], fileName(), {type:"image/png"});
+      if(navigator.canShare && navigator.canShare({files:[f]})){
+        navigator.share({files:[f], title:"철제 엣지 제작시안"}).catch(function(){});
+      }else{
+        toast("이 브라우저는 공유 미지원 → PNG 저장을 이용하세요");
+      }
+    });
+  });
+
+  /* ───────── 토글 ───────── */
+  $("e_swHole").addEventListener("click", function(){
+    holeOn = !holeOn;
+    this.classList.toggle("on", holeOn);
+    $("e_holeFlds").style.display = holeOn ? "" : "none";
+    render();
+  });
+  function setFinish(f){
+    finish = f;
+    $("e_btnRaw").classList.toggle("on", f === "무도장");
+    $("e_btnPaint").classList.toggle("on", f === "도장");
+    $("e_fColor").style.display = f === "도장" ? "" : "none";
+    render();
+  }
+  $("e_btnRaw").addEventListener("click", function(){ setFinish("무도장"); });
+  $("e_btnPaint").addEventListener("click", function(){ setFinish("도장"); });
+
+  ["e_inH","e_inB","e_inT","e_inL","e_inQty","e_inHd","e_inHs","e_inHe","e_inSite","e_inCo","e_inNote","e_inColor"]
+    .forEach(function(id){ $(id).addEventListener("input", render); });
+
+  render();
+})();
+</script>
+<script>
+(function(){
+  "use strict";
+  function $(id){ return document.getElementById(id); }
+  var DAYS = ["일","월","화","수","목","금","토"];
+  function iso(d){ return d.getFullYear()+"-"+("0"+(d.getMonth()+1)).slice(-2)+"-"+("0"+d.getDate()).slice(-2); }
+  function kdate(v){
+    if(!v) return "";
+    var p = v.split("-"), d = new Date(+p[0], +p[1]-1, +p[2]);
+    return (+p[1])+"월 "+(+p[2])+"일("+DAYS[d.getDay()]+")";
+  }
+  var today = new Date(), tmr = new Date(today.getTime() + 86400000);
+  $("r_date").value = iso(today);
+  $("r_tdate").value = iso(tmr);
+
+  var rMode = "full";
+  function setMode(m){
+    rMode = m;
+    $("r_mFull").classList.toggle("on", m === "full");
+    $("r_mSimple").classList.toggle("on", m === "simple");
+    $("r_fullFields").style.display = (m === "full") ? "" : "none";
+    render();
+  }
+  function build(){
+    var s = kdate($("r_date").value) + " " + $("r_site").value.trim() + "\n";
+    s += "-작업인원: " + ($("r_crew").value.trim() || "X");
+    if(rMode === "full"){
+      s += "\n-작업장비: " + ($("r_equip").value.trim() || "X") + "\n";
+      s += "-작업내용: " + ($("r_work").value.trim() || "X") + "\n";
+      s += "-농장자재: " + ($("r_mat").value.trim() || "X");
+    }
+    var ts = $("r_tsite").value.trim(), tc = $("r_tcrew").value.trim();
+    if(ts || tc){
+      s += "\n\n내일일정  " + kdate($("r_tdate").value) + "\n" + ts + (tc ? ": " + tc : "");
+    }
+    return s;
+  }
+  function render(){ $("r_out").textContent = build(); }
+  ["r_date","r_site","r_crew","r_equip","r_mat","r_work","r_tdate","r_tsite","r_tcrew"]
+    .forEach(function(id){ $(id).addEventListener("input", render); });
+
+  /* ── 기억 저장소 (필드별) ── */
+  function load(k){
+    var o; try{ o = JSON.parse(localStorage.getItem(k) || "{}"); }catch(e){ o = {}; }
+    Object.keys(o).forEach(function(x){ if(typeof o[x] === "number") o[x] = {n:o[x], t:0}; });
+    return o;
+  }
+  function save(k, o){ try{ localStorage.setItem(k, JSON.stringify(o)); }catch(e){} }
+  function bump(k, tokens){
+    var o = load(k), now = Date.now();
+    tokens.forEach(function(t){
+      t = t.trim();
+      if(t.length < 1 || t.length > 40) return;
+      if(t === "X" || t === "x") return;
+      if(!o[t]) o[t] = {n:0, t:0};
+      o[t].n++; o[t].t = now;
+    });
+    var keys = Object.keys(o);
+    if(keys.length > 30){
+      keys.sort(function(a,b){ return o[a].t - o[b].t; })
+          .slice(0, keys.length - 30)
+          .forEach(function(x){ delete o[x]; });
+    }
+    save(k, o);
+  }
+  /* mode: "set" 값 교체(현장) / "append" 쉼표 추가(인원·장비 등)
+     sortBy: "t" 최근순(현장) / "n" 빈도순 */
+  var CHIP_DEFS = [
+    ["r_c_site",  "rb_site",  "r_site",  "set",    "t"],
+    ["r_c_crew",  "rb_names", "r_crew",  "append", "n"],
+    ["r_c_equip", "rb_equip", "r_equip", "append", "n"],
+    ["r_c_mat",   "rb_mat",   "r_mat",   "append", "n"],
+    ["r_c_work",  "rb_work",  "r_work",  "append", "n"],
+    ["r_c_tsite", "rb_site",  "r_tsite", "set",    "t"],
+    ["r_c_tcrew", "rb_names", "r_tcrew", "append", "n"]
+  ];
+  function renderChips(){
+    CHIP_DEFS.forEach(function(def){
+      var elId = def[0], key = def[1], inputId = def[2], mode = def[3], sortBy = def[4];
+      var o = load(key);
+      var keys = Object.keys(o).sort(function(a,b){
+        return sortBy === "t" ? (o[b].t - o[a].t) : (o[b].n - o[a].n || o[b].t - o[a].t);
+      }).slice(0, 8);
+      var el = $(elId); el.innerHTML = "";
+      keys.forEach(function(n){
+        var b = document.createElement("button");
+        b.type = "button";
+        b.textContent = (mode === "set" ? "" : "+ ") + n;
+        b.addEventListener("click", function(){
+          var inp = $(inputId);
+          if(mode === "set"){ inp.value = n; }
+          else{
+            var v = inp.value.trim();
+            var base = (v === "X" || v === "x") ? "" : v;
+            var arr = base ? base.split(",").map(function(x){ return x.trim(); }).filter(Boolean) : [];
+            if(arr.indexOf(n) < 0) arr.push(n);
+            inp.value = arr.join(",");
+          }
+          render();
+        });
+        el.appendChild(b);
+      });
+    });
+  }
+  function learn(){
+    bump("rb_site",  [$("r_site").value, $("r_tsite").value]);
+    bump("rb_names", ($("r_crew").value + "," + $("r_tcrew").value).split(","));
+    bump("rb_equip", $("r_equip").value.split(","));
+    bump("rb_mat",   $("r_mat").value.split(","));
+    bump("rb_work",  $("r_work").value.split(","));
+  }
+
+  /* ── 내일일정 → 다음날 자동 입력 ── */
+  try{
+    var plan = JSON.parse(localStorage.getItem("rb_plan") || "null");
+    if(plan && plan.date === iso(today)){
+      if(plan.site && !$("r_site").value) $("r_site").value = plan.site;
+      if(plan.crew && !$("r_crew").value) $("r_crew").value = plan.crew;
+    }
+  }catch(e){}
+  function savePlan(){
+    try{
+      localStorage.setItem("rb_plan", JSON.stringify({
+        date: $("r_tdate").value, site: $("r_tsite").value.trim(), crew: $("r_tcrew").value.trim()
+      }));
+    }catch(e){}
+  }
+
+  /* ── 전일 복사 ── */
+  function saveReport(){
+    try{
+      localStorage.setItem("rb_lastreport", JSON.stringify({
+        site: $("r_site").value, crew: $("r_crew").value,
+        equip: $("r_equip").value, mat: $("r_mat").value, work: $("r_work").value
+      }));
+    }catch(e){}
+  }
+  $("r_btnPrev").addEventListener("click", function(){
+    var r = null;
+    try{ r = JSON.parse(localStorage.getItem("rb_lastreport") || "null"); }catch(e){}
+    if(!r){ toastR("저장된 전일 일보가 없어요"); return; }
+    $("r_site").value = r.site || ""; $("r_crew").value = r.crew || "";
+    $("r_equip").value = r.equip || "X"; $("r_mat").value = r.mat || "X";
+    $("r_work").value = r.work || "";
+    render(); toastR("전일 일보 불러옴 — 바뀐 것만 수정하세요");
+  });
+
+  function finalize(){ learn(); savePlan(); saveReport(); renderChips(); }
+
+  function toastR(m){
+    var t = document.getElementById("toast");
+    t.textContent = m; t.classList.add("show");
+    clearTimeout(t._tm); t._tm = setTimeout(function(){ t.classList.remove("show"); }, 2200);
+  }
+  function fallbackCopy(txt){
+    var ta = document.createElement("textarea");
+    ta.value = txt; document.body.appendChild(ta); ta.select();
+    try{ document.execCommand("copy"); toastR("복사 완료 — 카톡에 붙여넣기"); }
+    catch(e){ toastR("복사 실패 — 미리보기를 길게 눌러 복사하세요"); }
+    ta.remove();
+  }
+  $("r_btnCopy").addEventListener("click", function(){
+    var txt = build(); finalize();
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(txt).then(
+        function(){ toastR("복사 완료 — 카톡에 붙여넣기"); },
+        function(){ fallbackCopy(txt); });
+    }else fallbackCopy(txt);
+  });
+  $("r_btnShare").addEventListener("click", function(){
+    var txt = build(); finalize();
+    if(navigator.share){ navigator.share({text: txt}).catch(function(){}); }
+    else toastR("공유 미지원 — 텍스트 복사를 이용하세요");
+  });
+
+  $("r_mFull").addEventListener("click", function(){ setMode("full"); });
+  $("r_mSimple").addEventListener("click", function(){ setMode("simple"); });
+
+  renderChips(); render();
+})();
+</script>
+<script>
+(function(){
+  "use strict";
+  function $(id){ return document.getElementById(id); }
+  var pages = {G:$("pageG"), E:$("pageE"), R:$("pageR")}, tabs = {G:$("tabG"), E:$("tabE"), R:$("tabR")};
+  function show(k){
+    Object.keys(pages).forEach(function(x){
+      pages[x].style.display = (x===k) ? "" : "none";
+      tabs[x].classList.toggle("on", x===k);
+    });
+    try{ localStorage.setItem("fab_tab", k); }catch(e){}
+  }
+  $("tabG").addEventListener("click", function(){ show("G"); });
+  $("tabE").addEventListener("click", function(){ show("E"); });
+  $("tabR").addEventListener("click", function(){ show("R"); });
+
+  /* 현장명·회사명 두 탭 동기화 */
+  function link(a, b){
+    a.addEventListener("input", function(){
+      if(b.value !== a.value){ b.value = a.value; b.dispatchEvent(new Event("input")); }
+    });
+  }
+  var gS=$("g_inSite"), eS=$("e_inSite"), gC=$("g_inCo"), eC=$("e_inCo");
+  link(gS,eS); link(eS,gS); link(gC,eC); link(eC,gC);
+
+  /* 마지막 입력 기억 (지원 안 되는 환경에선 조용히 무시) */
+  function persist(el, key){
+    el.addEventListener("input", function(){ try{ localStorage.setItem(key, el.value); }catch(e){} });
+    var v=null; try{ v = localStorage.getItem(key); }catch(e){}
+    if(v !== null && v !== ""){ el.value = v; el.dispatchEvent(new Event("input")); }
+  }
+  persist(gS, "fab_site"); persist(gC, "fab_co");
+
+  var t=null; try{ t = localStorage.getItem("fab_tab"); }catch(e){}
+  show(t === "E" || t === "R" ? t : "G");
+})();
+</script>
+</body>
+</html>
