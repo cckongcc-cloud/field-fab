@@ -146,6 +146,14 @@
     border-radius:8px; padding:8px 10px; font-size:12px; font-weight:700;}
   #p_btnClear{background:#2A2E33; color:var(--txt); border:1px solid var(--line);}
   #p_btnShare{background:var(--acc); color:#1A1A1A;}
+  .pcard{border:1px solid var(--line); border-radius:10px; overflow:hidden; margin-bottom:10px; background:#15171A;}
+  .pchead{display:flex; align-items:center; gap:6px; padding:8px;}
+  .pchead .pcat{background:var(--acc); color:#1A1A1A; border:none; border-radius:8px;
+    padding:9px 13px; font-weight:800; font-size:13.5px;}
+  .pchead .sp{flex:1; font-size:10.5px; color:var(--sub); line-height:1.35;}
+  .pchead .mini{background:#1F2226; border:1px solid var(--line); color:var(--sub);
+    border-radius:8px; padding:9px 11px; font-size:12px; font-weight:700;}
+  .pcard img{display:block; width:100%; height:auto;}
 </style>
 </head>
 <body>
@@ -154,7 +162,7 @@
   <div class="tag">제작시안</div>
   <div class="tt">
     <h1>현장 도구</h1>
-    <p>그레이팅 · 철제엣지 · 현장일보 · 영수증 <span style="color:var(--acc); font-weight:700;">v4</span></p>
+    <p>그레이팅 · 철제엣지 · 현장일보 · 영수증 <span style="color:var(--acc); font-weight:700;">v5</span></p>
   </div>
 </header>
 
@@ -319,7 +327,7 @@
       <input type="file" id="p_file" accept="image/*" multiple
         style="position:absolute; width:1px; height:1px; opacity:0; overflow:hidden; clip:rect(0 0 0 0);">
     </label>
-    <p class="hint">선택한 분류·날짜·현장이 사진 위에 띠지로 붙어요. 분류가 다른 영수증은 분류 바꿔가며 추가하면 돼요.</p>
+    <p class="hint">영수증 종이의 끝을 자동으로 찾아 그 바로 위에 라벨을 붙여요. 위치가 어긋나면 사진에서 원하는 지점을 탭, 분류가 틀리면 노란 분류 버튼을 탭(누를 때마다 다음 분류로 변경).</p>
   </div>
   <div class="card">
     <h2>처리된 영수증 (<span id="p_cnt">0</span>장)</h2>
@@ -1075,7 +1083,8 @@
   function $(id){ return document.getElementById(id); }
   var CATS = ["간식","식대","자재","숙박","유류","기타"];
   var cat = "간식";
-  var items = []; // {file, url, label}
+  var items = []; // {orig, cat, date, site, memo, bandY, file, url}
+  var seq = 0;
 
   function iso(d){ return d.getFullYear()+"-"+("0"+(d.getMonth()+1)).slice(-2)+"-"+("0"+d.getDate()).slice(-2); }
   var DAYS = ["일","월","화","수","목","금","토"];
@@ -1086,7 +1095,6 @@
   }
   $("p_date").value = iso(new Date());
 
-  /* 분류 버튼 */
   var catWrap = $("p_cats");
   CATS.forEach(function(c){
     var b = document.createElement("button");
@@ -1100,17 +1108,20 @@
     catWrap.appendChild(b);
   });
 
-  /* 현장 자동 채움: 일보에서 마지막 쓴 현장 */
   try{
     var lr = JSON.parse(localStorage.getItem("rb_lastreport") || "null");
     if(lr && lr.site) $("p_site").value = lr.site;
   }catch(e){}
 
-  function labelText(){
-    var parts = ["[" + cat + "]", kshort($("p_date").value)];
-    var st = $("p_site").value.trim(); if(st) parts.push(st);
-    var mm = $("p_memo").value.trim(); if(mm) parts.push(mm);
+  function labelOf(it){
+    var parts = ["[" + it.cat + "]", kshort(it.date)];
+    if(it.site) parts.push(it.site);
+    if(it.memo) parts.push(it.memo);
     return parts.join("  ");
+  }
+  function fnameOf(it, n){
+    var d = (it.date || "").replace(/-/g, "").slice(4);
+    return "영수증_" + it.cat + "_" + d + "_" + n + ".jpg";
   }
 
   function loadImage(file){
@@ -1130,36 +1141,59 @@
     im.src = u;
   }
 
-  function stamp(file){
-    var txt = labelText();
-    return loadImage(file).then(function(im){
+  /* 밝은 영수증 종이의 아래 끝을 찾음 → 밴드 하단 위치(0~1) */
+  function detectBottom(srcCanvas){
+    var sw = 200, sh = Math.max(20, Math.round(srcCanvas.height * 200 / srcCanvas.width));
+    var c = document.createElement("canvas"); c.width = sw; c.height = sh;
+    var ctx = c.getContext("2d");
+    ctx.drawImage(srcCanvas, 0, 0, sw, sh);
+    var data;
+    try{ data = ctx.getImageData(0, 0, sw, sh).data; }catch(e){ return 1; }
+    var x0 = Math.floor(sw*0.2), x1 = Math.floor(sw*0.8);
+    for(var y = sh-1; y >= Math.floor(sh*0.25); y--){
+      var bright = 0, tot = 0;
+      for(var x = x0; x < x1; x += 2){
+        var k = (y*sw + x) * 4;
+        var lum = 0.299*data[k] + 0.587*data[k+1] + 0.114*data[k+2];
+        if(lum > 172) bright++;
+        tot++;
+      }
+      if(tot && bright/tot > 0.55) return Math.min(1, (y+2)/sh);
+    }
+    return 1;
+  }
+
+  function stamp(it){
+    return loadImage(it.orig).then(function(im){
       var iw = im.width, ih = im.height;
       var scale = Math.min(1, 1600 / Math.max(iw, ih));
-      var w = Math.round(iw * scale), h = Math.round(ih * scale);
-      var band = Math.max(56, Math.round(w * 0.085));
-      var c = document.createElement("canvas");
-      c.width = w; c.height = h + band;
+      var w = Math.round(iw*scale), h = Math.round(ih*scale);
+      var c = document.createElement("canvas"); c.width = w; c.height = h;
       var ctx = c.getContext("2d");
-      ctx.fillStyle = "#F2B838"; ctx.fillRect(0, 0, w, band);
+      ctx.drawImage(im, 0, 0, w, h);
+      if(it.bandY == null) it.bandY = detectBottom(c);
+      var band = Math.max(56, Math.round(w * 0.085));
+      var yb = Math.round(it.bandY * h);
+      yb = Math.min(h, Math.max(band, yb));
+      var y0 = yb - band;
+      ctx.fillStyle = "rgba(242,184,56,0.94)";
+      ctx.fillRect(0, y0, w, band);
       ctx.fillStyle = "#1A1A1A";
+      var txt = labelOf(it);
       var fs = Math.round(band * 0.42);
       ctx.font = "800 " + fs + "px 'Malgun Gothic', sans-serif";
       ctx.textBaseline = "middle";
-      // 글자가 넘치면 축소
       while(ctx.measureText(txt).width > w - 24 && fs > 12){
         fs -= 2; ctx.font = "800 " + fs + "px 'Malgun Gothic', sans-serif";
       }
-      ctx.fillText(txt, 12, band/2 + 1);
-      ctx.drawImage(im, 0, band, w, h);
-      return new Promise(function(res){
-        c.toBlob(function(blob){ res(blob); }, "image/jpeg", 0.85);
-      });
+      ctx.fillText(txt, 12, y0 + band/2 + 1);
+      return new Promise(function(res){ c.toBlob(function(b){ res(b); }, "image/jpeg", 0.85); });
+    }).then(function(blob){
+      if(it.url) URL.revokeObjectURL(it.url);
+      seq++;
+      it.file = new File([blob], fnameOf(it, seq), {type: "image/jpeg"});
+      it.url = URL.createObjectURL(blob);
     });
-  }
-
-  function fname(i){
-    var d = ($("p_date").value || "").replace(/-/g, "").slice(4);
-    return "영수증_" + cat + "_" + d + "_" + i + ".jpg";
   }
 
   function renderList(){
@@ -1167,9 +1201,17 @@
     $("p_cnt").textContent = items.length;
     if(!items.length){ el.innerHTML = '<p class="hint">아직 없음</p>'; return; }
     items.forEach(function(it, idx){
-      var row = document.createElement("div"); row.className = "pitem";
-      row.innerHTML = '<img src="' + it.url + '"><div class="pinfo"><b>' + it.label + '</b><span>' + it.file.name + '</span></div>';
-      var bs = document.createElement("button"); bs.type="button"; bs.textContent = "공유";
+      var card = document.createElement("div"); card.className = "pcard";
+      var head = document.createElement("div"); head.className = "pchead";
+      var bc = document.createElement("button"); bc.type="button"; bc.className="pcat"; bc.textContent = it.cat;
+      bc.addEventListener("click", function(){
+        it.cat = CATS[(CATS.indexOf(it.cat) + 1) % CATS.length];
+        bc.textContent = it.cat;
+        stamp(it).then(function(){ img.src = it.url; });
+      });
+      var sp = document.createElement("div"); sp.className = "sp";
+      sp.textContent = "분류 틀리면 노란 버튼 탭 · 라벨 위치는 사진 탭";
+      var bs = document.createElement("button"); bs.type="button"; bs.className="mini"; bs.textContent = "공유";
       bs.addEventListener("click", function(){
         if(navigator.canShare && navigator.canShare({files:[it.file]})){
           navigator.share({files:[it.file]}).catch(function(){});
@@ -1180,13 +1222,22 @@
           toastP("저장됨 — 갤러리에서 카톡으로 보내세요");
         }
       });
-      var bd = document.createElement("button"); bd.type="button"; bd.textContent = "삭제";
+      var bd = document.createElement("button"); bd.type="button"; bd.className="mini"; bd.textContent = "삭제";
       bd.addEventListener("click", function(){
         URL.revokeObjectURL(it.url);
         items.splice(idx, 1); renderList();
       });
-      row.appendChild(bs); row.appendChild(bd);
-      el.appendChild(row);
+      head.appendChild(bc); head.appendChild(sp); head.appendChild(bs); head.appendChild(bd);
+      var img = document.createElement("img");
+      img.src = it.url;
+      img.addEventListener("click", function(e){
+        var r = img.getBoundingClientRect();
+        var ratio = (e.clientY - r.top) / r.height;
+        it.bandY = Math.min(1, Math.max(0.06, ratio));
+        stamp(it).then(function(){ img.src = it.url; });
+      });
+      card.appendChild(head); card.appendChild(img);
+      el.appendChild(card);
     });
   }
 
@@ -1194,15 +1245,17 @@
     var files = Array.prototype.slice.call(this.files || []);
     this.value = "";
     if(!files.length) return;
-    var lbl = labelText();
     toastP("처리 중...");
     var chain = Promise.resolve();
     files.forEach(function(f){
+      var it = {
+        orig: f, cat: cat, bandY: null,
+        date: $("p_date").value,
+        site: $("p_site").value.trim(),
+        memo: $("p_memo").value.trim()
+      };
       chain = chain.then(function(){
-        return stamp(f).then(function(blob){
-          var file = new File([blob], fname(items.length + 1), {type:"image/jpeg"});
-          items.push({file: file, url: URL.createObjectURL(blob), label: lbl});
-        });
+        return stamp(it).then(function(){ items.push(it); });
       });
     });
     chain.then(function(){ renderList(); toastP(files.length + "장 처리 완료"); },
@@ -1215,7 +1268,7 @@
     if(navigator.canShare && navigator.canShare({files: fs})){
       navigator.share({files: fs}).catch(function(){});
     }else if(navigator.canShare && navigator.canShare({files:[fs[0]]})){
-      toastP("한 번에 여러 장 공유가 안 되는 폰이에요 — 개별 공유를 이용하세요");
+      toastP("한 번에 여러 장 공유가 안 되는 폰 — 개별 공유를 이용하세요");
     }else{
       toastP("공유 미지원 — 개별 저장을 이용하세요");
     }
