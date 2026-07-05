@@ -134,7 +134,7 @@
   #p_cats button{flex:1 1 30%; background:#15171A; border:1px solid var(--line); color:var(--sub);
     border-radius:8px; padding:11px 4px; font-size:13.5px; font-weight:700;}
   #p_cats button.on{background:var(--acc); border-color:var(--acc); color:#1A1A1A;}
-  #p_pick{width:100%; margin-top:10px; background:#2A2E33; border:1px dashed var(--sub);
+  #p_pick,#p_pick2{width:100%; margin-top:10px; background:#2A2E33; border:1px dashed var(--sub);
     color:var(--txt); border-radius:10px; padding:16px 6px; font-size:15px; font-weight:800;}
   .pitem{display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid var(--line);}
   .pitem:last-child{border-bottom:none;}
@@ -162,7 +162,7 @@
   <div class="tag">제작시안</div>
   <div class="tt">
     <h1>현장 도구</h1>
-    <p>그레이팅 · 철제엣지 · 현장일보 · 영수증 <span style="color:var(--acc); font-weight:700;">v5</span></p>
+    <p>그레이팅 · 철제엣지 · 현장일보 · 영수증 <span style="color:var(--acc); font-weight:700;">v8</span></p>
   </div>
 </header>
 
@@ -299,6 +299,8 @@
       <div class="chips" id="r_c_tsite"></div>
       <div class="fld full"><label>인원</label><input id="r_tcrew" type="text" placeholder="예) 공철민,김규근,진영보도 2명"></div>
       <div class="chips" id="r_c_tcrew"></div>
+      <div class="fld full"><label>휴무</label><input id="r_toff" type="text" placeholder="예) 김규근"></div>
+      <div class="chips" id="r_c_toff"></div>
     </div>
     <p class="hint">내일 일정의 현장·인원은 내일 앱을 열면 오늘 일보에 자동 입력돼요.</p>
   </div>
@@ -323,10 +325,16 @@
       <div class="fld"><label>현장 (선택)</label><input id="p_site" type="text" placeholder="예) 운양동"></div>
       <div class="fld full"><label>메모 (선택)</label><input id="p_memo" type="text" placeholder="예) 조공 간식"></div>
     </div>
-    <label id="p_pick" style="display:block; text-align:center; cursor:pointer;">+ 영수증 사진 선택 (여러 장 가능)
-      <input type="file" id="p_file" accept="image/*" multiple
-        style="position:absolute; width:1px; height:1px; opacity:0; overflow:hidden; clip:rect(0 0 0 0);">
-    </label>
+    <div style="display:flex; gap:8px;">
+      <label id="p_pick" style="display:block; flex:1; text-align:center; cursor:pointer;">📷 바로 촬영
+        <input type="file" id="p_cam" accept="image/*" capture="environment"
+          style="position:absolute; width:1px; height:1px; opacity:0; overflow:hidden; clip:rect(0 0 0 0);">
+      </label>
+      <label id="p_pick2" style="display:block; flex:1; text-align:center; cursor:pointer;">🖼 앨범에서 선택
+        <input type="file" id="p_file" accept="image/*" multiple
+          style="position:absolute; width:1px; height:1px; opacity:0; overflow:hidden; clip:rect(0 0 0 0);">
+      </label>
+    </div>
     <p class="hint">영수증 종이의 끝을 자동으로 찾아 그 바로 위에 라벨을 붙여요. 위치가 어긋나면 사진에서 원하는 지점을 탭, 분류가 틀리면 노란 분류 버튼을 탭(누를 때마다 다음 분류로 변경).</p>
   </div>
   <div class="card">
@@ -336,6 +344,7 @@
 </main>
 <div class="bar">
   <button id="p_btnClear" type="button">비우기</button>
+  <button id="p_btnSaveAll" type="button" style="background:#2A2E33; color:var(--txt); border:1px solid var(--line);">전체 저장</button>
   <button id="p_btnShare" type="button">전체 공유</button>
 </div>
 </div>
@@ -920,21 +929,28 @@
     render();
   }
   function build(){
-    var s = kdate($("r_date").value) + " " + $("r_site").value.trim() + "\n";
-    s += "-작업인원: " + ($("r_crew").value.trim() || "X");
+    var s = "";
+    var st = $("r_site").value.trim(), cw = $("r_crew").value.trim();
+    var skipToday = (rMode === "simple" && !st && !cw);
+    if(!skipToday){
+      s = kdate($("r_date").value) + " " + st + "\n";
+      s += "-작업인원: " + (cw || "X");
+    }
     if(rMode === "full"){
       s += "\n-작업장비: " + ($("r_equip").value.trim() || "X") + "\n";
       s += "-작업내용: " + ($("r_work").value.trim() || "X") + "\n";
       s += "-농장자재: " + ($("r_mat").value.trim() || "X");
     }
-    var ts = $("r_tsite").value.trim(), tc = $("r_tcrew").value.trim();
-    if(ts || tc){
-      s += "\n\n내일일정  " + kdate($("r_tdate").value) + "\n" + ts + (tc ? ": " + tc : "");
+    var ts = $("r_tsite").value.trim(), tc = $("r_tcrew").value.trim(), toff = $("r_toff").value.trim();
+    if(ts || tc || toff){
+      s += (s ? "\n\n" : "") + "내일일정  " + kdate($("r_tdate").value);
+      if(ts || tc) s += "\n" + ts + (tc ? ": " + tc : "");
+      if(toff) s += "\n휴무: " + toff;
     }
     return s;
   }
   function render(){ $("r_out").textContent = build(); }
-  ["r_date","r_site","r_crew","r_equip","r_mat","r_work","r_tdate","r_tsite","r_tcrew"]
+  ["r_date","r_site","r_crew","r_equip","r_mat","r_work","r_tdate","r_tsite","r_tcrew","r_toff"]
     .forEach(function(id){ $(id).addEventListener("input", render); });
 
   /* ── 기억 저장소 (필드별) ── */
@@ -970,7 +986,8 @@
     ["r_c_mat",   "rb_mat",   "r_mat",   "append", "n"],
     ["r_c_work",  "rb_work",  "r_work",  "append", "n"],
     ["r_c_tsite", "rb_site",  "r_tsite", "set",    "t"],
-    ["r_c_tcrew", "rb_names", "r_tcrew", "append", "n"]
+    ["r_c_tcrew", "rb_names", "r_tcrew", "append", "n"],
+    ["r_c_toff",  "rb_names", "r_toff",  "append", "n"]
   ];
   function renderChips(){
     CHIP_DEFS.forEach(function(def){
@@ -1002,7 +1019,7 @@
   }
   function learn(){
     bump("rb_site",  [$("r_site").value, $("r_tsite").value]);
-    bump("rb_names", ($("r_crew").value + "," + $("r_tcrew").value).split(","));
+    bump("rb_names", ($("r_crew").value + "," + $("r_tcrew").value + "," + $("r_toff").value).split(","));
     bump("rb_equip", $("r_equip").value.split(","));
     bump("rb_mat",   $("r_mat").value.split(","));
     bump("rb_work",  $("r_work").value.split(","));
@@ -1211,6 +1228,8 @@
       });
       var sp = document.createElement("div"); sp.className = "sp";
       sp.textContent = "분류 틀리면 노란 버튼 탭 · 라벨 위치는 사진 탭";
+      var bv = document.createElement("button"); bv.type="button"; bv.className="mini"; bv.textContent = "저장";
+      bv.addEventListener("click", function(){ saveOne(it); });
       var bs = document.createElement("button"); bs.type="button"; bs.className="mini"; bs.textContent = "공유";
       bs.addEventListener("click", function(){
         if(navigator.canShare && navigator.canShare({files:[it.file]})){
@@ -1227,7 +1246,7 @@
         URL.revokeObjectURL(it.url);
         items.splice(idx, 1); renderList();
       });
-      head.appendChild(bc); head.appendChild(sp); head.appendChild(bs); head.appendChild(bd);
+      head.appendChild(bc); head.appendChild(sp); head.appendChild(bv); head.appendChild(bs); head.appendChild(bd);
       var img = document.createElement("img");
       img.src = it.url;
       img.addEventListener("click", function(e){
@@ -1241,9 +1260,9 @@
     });
   }
 
-  $("p_file").addEventListener("change", function(){
-    var files = Array.prototype.slice.call(this.files || []);
-    this.value = "";
+  function handleFiles(inp){
+    var files = Array.prototype.slice.call(inp.files || []);
+    inp.value = "";
     if(!files.length) return;
     toastP("처리 중...");
     var chain = Promise.resolve();
@@ -1260,8 +1279,20 @@
     });
     chain.then(function(){ renderList(); toastP(files.length + "장 처리 완료"); },
       function(){ toastP("사진 처리 실패 — 다시 시도해 주세요"); });
-  });
+  }
+  $("p_file").addEventListener("change", function(){ handleFiles(this); });
+  $("p_cam").addEventListener("change", function(){ handleFiles(this); });
 
+  function saveOne(it){
+    var a = document.createElement("a");
+    a.href = it.url; a.download = it.file.name;
+    document.body.appendChild(a); a.click(); a.remove();
+  }
+  $("p_btnSaveAll").addEventListener("click", function(){
+    if(!items.length){ toastP("처리된 영수증이 없어요"); return; }
+    items.forEach(function(it, i){ setTimeout(function(){ saveOne(it); }, i * 350); });
+    toastP(items.length + "장 저장 — 갤러리 '다운로드'에서 확인");
+  });
   $("p_btnShare").addEventListener("click", function(){
     if(!items.length){ toastP("처리된 영수증이 없어요"); return; }
     var fs = items.map(function(it){ return it.file; });
