@@ -162,7 +162,7 @@
   <div class="tag">제작시안</div>
   <div class="tt">
     <h1>현장 도구</h1>
-    <p>그레이팅 · 철제엣지 · 현장일보 · 영수증 <span style="color:var(--acc); font-weight:700;">v8</span></p>
+    <p>그레이팅 · 철제엣지 · 현장일보 · 영수증 <span style="color:var(--acc); font-weight:700;">v9</span></p>
   </div>
 </header>
 
@@ -275,6 +275,7 @@
       <div class="chips" id="r_c_site"></div>
       <div class="fld full"><label>작업인원 (쉼표로 구분)</label><input id="r_crew" type="text" placeholder="예) 공철민,김규근,에스타일 5명"></div>
       <div class="chips" id="r_c_crew"></div>
+      <div class="chips gongsu" data-for="r_crew"></div>
       <div class="full seg" style="margin-top:2px;">
         <button id="r_mFull" type="button" class="on">전체 일보</button>
         <button id="r_mSimple" type="button">간단 (날짜·현장·인원)</button>
@@ -299,6 +300,7 @@
       <div class="chips" id="r_c_tsite"></div>
       <div class="fld full"><label>인원</label><input id="r_tcrew" type="text" placeholder="예) 공철민,김규근,진영보도 2명"></div>
       <div class="chips" id="r_c_tcrew"></div>
+      <div class="chips gongsu" data-for="r_tcrew"></div>
       <div class="fld full"><label>휴무</label><input id="r_toff" type="text" placeholder="예) 김규근"></div>
       <div class="chips" id="r_c_toff"></div>
     </div>
@@ -1019,7 +1021,8 @@
   }
   function learn(){
     bump("rb_site",  [$("r_site").value, $("r_tsite").value]);
-    bump("rb_names", ($("r_crew").value + "," + $("r_tcrew").value + "," + $("r_toff").value).split(","));
+    bump("rb_names", ($("r_crew").value + "," + $("r_tcrew").value + "," + $("r_toff").value)
+      .split(",").map(function(t){ return t.replace(/\s+[01]\.\d\s*$/, ""); }));
     bump("rb_equip", $("r_equip").value.split(","));
     bump("rb_mat",   $("r_mat").value.split(","));
     bump("rb_work",  $("r_work").value.split(","));
@@ -1086,6 +1089,36 @@
     var txt = build(); finalize();
     if(navigator.share){ navigator.share({text: txt}).catch(function(){}); }
     else toastR("공유 미지원 — 텍스트 복사를 이용하세요");
+  });
+
+  /* ── 공수 버튼: 마지막 이름에 부여, 다시 누르면 교체, 1.0은 제거 ── */
+  var GONGSU = ["0.3","0.5","0.7","1.0"];
+  function applyGongsu(inputId, g, all){
+    var inp = $(inputId);
+    var v = inp.value.trim();
+    if(!v) return;
+    var arr = v.split(",").map(function(x){ return x.trim(); }).filter(Boolean);
+    function setG(token){
+      var base = token.replace(/\s+[01]\.\d\s*$/, "");
+      return g === "1.0" ? base : base + " " + g;
+    }
+    if(all){ arr = arr.map(setG); }
+    else{ arr[arr.length-1] = setG(arr[arr.length-1]); }
+    inp.value = arr.join(",");
+    render();
+  }
+  Array.prototype.forEach.call(document.querySelectorAll(".gongsu"), function(box){
+    var target = box.getAttribute("data-for");
+    GONGSU.forEach(function(g){
+      var b = document.createElement("button");
+      b.type = "button"; b.textContent = "×" + g;
+      b.addEventListener("click", function(){ applyGongsu(target, g, false); });
+      box.appendChild(b);
+    });
+    var ball = document.createElement("button");
+    ball.type = "button"; ball.textContent = "전체 0.5";
+    ball.addEventListener("click", function(){ applyGongsu(target, "0.5", true); });
+    box.appendChild(ball);
   });
 
   $("r_mFull").addEventListener("click", function(){ setMode("full"); });
