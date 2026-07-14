@@ -162,7 +162,7 @@
   <div class="tag">제작시안</div>
   <div class="tt">
     <h1>현장 도구</h1>
-    <p>그레이팅 · 철제엣지 · 현장일보 · 영수증 <span style="color:var(--acc); font-weight:700;">v9</span></p>
+    <p>그레이팅 · 철제엣지 · 현장일보 · 영수증 <span style="color:var(--acc); font-weight:700;">v10</span></p>
   </div>
 </header>
 
@@ -1217,10 +1217,16 @@
     return loadImage(it.orig).then(function(im){
       var iw = im.width, ih = im.height;
       var scale = Math.min(1, 1600 / Math.max(iw, ih));
-      var w = Math.round(iw*scale), h = Math.round(ih*scale);
+      var w0 = Math.round(iw*scale), h0 = Math.round(ih*scale);
+      var rot = it.rot || 0;
+      var w = (rot % 180) ? h0 : w0, h = (rot % 180) ? w0 : h0;
       var c = document.createElement("canvas"); c.width = w; c.height = h;
       var ctx = c.getContext("2d");
-      ctx.drawImage(im, 0, 0, w, h);
+      ctx.save();
+      ctx.translate(w/2, h/2);
+      ctx.rotate(rot * Math.PI / 180);
+      ctx.drawImage(im, -w0/2, -h0/2, w0, h0);
+      ctx.restore();
       if(it.bandY == null) it.bandY = detectBottom(c);
       var band = Math.max(56, Math.round(w * 0.085));
       var yb = Math.round(it.bandY * h);
@@ -1259,6 +1265,12 @@
         bc.textContent = it.cat;
         stamp(it).then(function(){ img.src = it.url; });
       });
+      var br = document.createElement("button"); br.type="button"; br.className="mini"; br.textContent = "↻";
+      br.addEventListener("click", function(){
+        it.rot = ((it.rot || 0) + 90) % 360;
+        it.bandY = null; /* 회전 후 영수증 끝 위치 다시 탐지 */
+        stamp(it).then(function(){ img.src = it.url; });
+      });
       var sp = document.createElement("div"); sp.className = "sp";
       sp.textContent = "분류 틀리면 노란 버튼 탭 · 라벨 위치는 사진 탭";
       var bv = document.createElement("button"); bv.type="button"; bv.className="mini"; bv.textContent = "저장";
@@ -1279,7 +1291,7 @@
         URL.revokeObjectURL(it.url);
         items.splice(idx, 1); renderList();
       });
-      head.appendChild(bc); head.appendChild(sp); head.appendChild(bv); head.appendChild(bs); head.appendChild(bd);
+      head.appendChild(bc); head.appendChild(br); head.appendChild(sp); head.appendChild(bv); head.appendChild(bs); head.appendChild(bd);
       var img = document.createElement("img");
       img.src = it.url;
       img.addEventListener("click", function(e){
@@ -1301,7 +1313,7 @@
     var chain = Promise.resolve();
     files.forEach(function(f){
       var it = {
-        orig: f, cat: cat, bandY: null,
+        orig: f, cat: cat, bandY: null, rot: 0,
         date: $("p_date").value,
         site: $("p_site").value.trim(),
         memo: $("p_memo").value.trim()
