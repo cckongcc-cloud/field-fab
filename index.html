@@ -154,6 +154,19 @@
   .pchead .mini{background:#1F2226; border:1px solid var(--line); color:var(--sub);
     border-radius:8px; padding:9px 11px; font-size:12px; font-weight:700;}
   .pcard img{display:block; width:100%; height:auto;}
+  .qrow{border:1px solid var(--line); border-radius:8px; margin-bottom:6px; overflow:hidden;}
+  .qrow > button{display:block; width:100%; text-align:left; background:#15171A; border:none;
+    color:var(--txt); padding:10px 12px; font-size:13.5px; font-weight:700;}
+  .qrow > button span{color:var(--sub); font-weight:400; font-size:12px;}
+  .qrow pre{display:none; margin:0; padding:10px 12px; border-top:1px solid var(--line);
+    white-space:pre-wrap; word-break:break-all; font-family:inherit; font-size:13px;
+    line-height:1.65; color:var(--sub); background:#101214;}
+  .qrow.open pre{display:block;}
+  #r_qsum{background:#15171A; border:1px dashed var(--acc); border-radius:8px;
+    padding:9px 11px; margin:8px 0; font-size:13.5px; color:var(--txt); display:none;}
+  #r_qsum b{color:var(--acc);}
+  #r_export{width:100%; margin-top:10px; background:#2A2E33; border:1px solid var(--line);
+    color:var(--txt); border-radius:10px; padding:12px 6px; font-size:13.5px; font-weight:700;}
 </style>
 </head>
 <body>
@@ -162,7 +175,7 @@
   <div class="tag">제작시안</div>
   <div class="tt">
     <h1>현장 도구</h1>
-    <p>그레이팅 · 철제엣지 · 현장일보 · 영수증 <span style="color:var(--acc); font-weight:700;">v13</span></p>
+    <p>그레이팅 · 철제엣지 · 현장일보 · 영수증 <span style="color:var(--acc); font-weight:700;">v17</span></p>
   </div>
 </header>
 
@@ -267,8 +280,15 @@
 
 <div id="pageR" style="display:none">
 <main>
-  <div class="card">
-    <div class="switchRow"><h2 style="margin:0;">오늘 일보</h2><button id="r_btnPrev" type="button" class="chipbtn" style="flex:0 0 auto; padding:7px 14px; font-size:12px;">전일 복사</button></div>
+  <div class="seg" style="margin-bottom:12px;">
+    <button id="r_mFull" type="button" class="on">전체 일보</button>
+    <button id="r_mSimple" type="button">간단 공지 (내일일정만)</button>
+  </div>
+  <div class="card" id="r_todayCard">
+    <div class="switchRow"><h2 style="margin:0;">오늘 일보</h2><div style="display:flex; gap:6px;">
+      <button id="r_btnPrev" type="button" class="chipbtn" style="flex:0 0 auto; padding:7px 14px; font-size:12px;">전일 복사</button>
+      <button id="r_btnReset" type="button" style="flex:0 0 auto; background:#15171A; border:1px solid var(--red); color:var(--red); border-radius:8px; padding:7px 14px; font-size:12px; font-weight:700;">전체 삭제</button>
+    </div></div>
     <div class="grid">
       <div class="fld"><label>날짜</label><input id="r_date" type="date"></div>
       <div class="fld"><label>현장 (주소)</label><input id="r_site" type="text" placeholder="예) 김포 운양동1256-1"></div>
@@ -276,10 +296,6 @@
       <div class="fld full"><label>작업인원 (쉼표로 구분)</label><input id="r_crew" type="text" placeholder="예) 공철민,김규근,에스타일 5명"></div>
       <div class="chips" id="r_c_crew"></div>
       <div class="chips gongsu" data-for="r_crew"></div>
-      <div class="full seg" style="margin-top:2px;">
-        <button id="r_mFull" type="button" class="on">전체 일보</button>
-        <button id="r_mSimple" type="button">간단 (날짜·현장·인원)</button>
-      </div>
       <div class="full" id="r_fullFields">
         <div class="grid">
           <div class="fld full"><label>작업장비</label><input id="r_equip" type="text" value="X"></div>
@@ -342,6 +358,13 @@
   <div class="card">
     <h2>미리보기</h2>
     <pre id="r_out"></pre>
+  </div>
+  <div class="card">
+    <h2>지난 일보 검색</h2>
+    <div class="fld"><label>업체·현장·작업내용으로 검색</label><input id="r_q" type="text" placeholder="예) 에스타일"></div>
+    <div id="r_qsum"></div>
+    <div id="r_qlist"><p class="hint">복사·공유한 일보가 자동으로 여기 쌓여요. 기록은 이 폰에만 저장되니 폰을 바꾸기 전엔 아래 내보내기로 백업해 두세요.</p></div>
+    <button id="r_export" type="button">전체 기록 내보내기 (백업)</button>
   </div>
 </main>
 <div class="bar">
@@ -960,10 +983,7 @@
     rMode = m;
     $("r_mFull").classList.toggle("on", m === "full");
     $("r_mSimple").classList.toggle("on", m === "simple");
-    $("r_fullFields").style.display = (m === "full") ? "" : "none";
-    Array.prototype.forEach.call(document.querySelectorAll(".rw"), function(el){
-      el.style.display = (m === "full") ? "" : "none";
-    });
+    $("r_todayCard").style.display = (m === "full") ? "" : "none";
     render();
   }
   function blkOn(n){ return $("r_blk"+n).style.display !== "none"; }
@@ -981,32 +1001,25 @@
   }
   function build(){
     var s = "";
-    var blocks = siteBlocks();
-    var multi = blocks.length > 1;
-    var st = blocks[0].site, cw = blocks[0].crew;
-    var skipToday = (rMode === "simple" && !multi && !st && !cw);
-    if(!skipToday){
+    if(rMode === "full"){
+      var blocks = siteBlocks();
+      var multi = blocks.length > 1;
+      var st = blocks[0].site, cw = blocks[0].crew;
       if(multi){
         s = kdate($("r_date").value);
-        if(rMode === "simple"){
-          blocks.forEach(function(b){ s += "\n" + b.site + (b.crew ? ": " + b.crew : ""); });
-        }else{
-          blocks.forEach(function(b, i){
-            s += "\n\n" + (b.site || ("현장" + (i+1)));
-            s += "\n-작업인원: " + (b.crew || "X");
-            s += "\n-작업장비: " + (b.equip || "X");
-            s += "\n-작업내용: " + (b.work || "X");
-            s += "\n-농장자재: " + (b.mat || "X");
-          });
-        }
+        blocks.forEach(function(b, i){
+          s += "\n\n" + (b.site || ("현장" + (i+1)));
+          s += "\n-작업인원: " + (b.crew || "X");
+          s += "\n-작업장비: " + (b.equip || "X");
+          s += "\n-작업내용: " + (b.work || "X");
+          s += "\n-농장자재: " + (b.mat || "X");
+        });
       }else{
         s = kdate($("r_date").value) + " " + st + "\n";
         s += "-작업인원: " + (cw || "X");
-        if(rMode === "full"){
-          s += "\n-작업장비: " + ($("r_equip").value.trim() || "X") + "\n";
-          s += "-작업내용: " + (blocks[0].work || "X") + "\n";
-          s += "-농장자재: " + ($("r_mat").value.trim() || "X");
-        }
+        s += "\n-작업장비: " + ($("r_equip").value.trim() || "X") + "\n";
+        s += "-작업내용: " + (blocks[0].work || "X") + "\n";
+        s += "-농장자재: " + ($("r_mat").value.trim() || "X");
       }
     }
     var ts = $("r_tsite").value.trim(), tc = $("r_tcrew").value.trim(), toff = $("r_toff").value.trim();
@@ -1151,7 +1164,111 @@
     render(); toastR("전일 일보 불러옴 — 바뀐 것만 수정하세요");
   });
 
-  function finalize(){ learn(); savePlan(); saveReport(); renderChips(); }
+  /* ── 일보 기록 저장·검색 ── */
+  function loadLog(){ try{ return JSON.parse(localStorage.getItem("rb_log") || "[]"); }catch(e){ return []; } }
+  function saveLog(){
+    try{
+      var log = loadLog();
+      var d = $("r_date").value;
+      if(!d) return;
+      var entry = {d: d, t: build(), blocks: (rMode === "full" ? siteBlocks() : []), off: $("r_toff").value.trim()};
+      var i;
+      for(i = 0; i < log.length; i++){ if(log[i].d === d) break; }
+      if(i < log.length) log[i] = entry; else log.push(entry);
+      log.sort(function(a,b){ return a.d < b.d ? -1 : 1; });
+      if(log.length > 400) log = log.slice(log.length - 400);
+      localStorage.setItem("rb_log", JSON.stringify(log));
+    }catch(e){}
+  }
+  function gongsuOf(token){
+    var m = token.match(/\s([0-9]*\.?[0-9]+)\s*$/);
+    return m ? parseFloat(m[1]) : 1;
+  }
+  function renderLog(){
+    var q = $("r_q").value.trim();
+    var log = loadLog().slice().reverse(); // 최신순
+    var listEl = $("r_qlist"), sumEl = $("r_qsum");
+    var hits = q ? log.filter(function(e){ return e.t && e.t.indexOf(q) >= 0; }) : log.slice(0, 10);
+    /* 업체 집계: 인원란에 q가 포함된 날 */
+    if(q){
+      var days = 0, gsum = 0;
+      log.forEach(function(e){
+        var hit = false;
+        (e.blocks || []).forEach(function(b){
+          (b.crew || "").split(",").forEach(function(tk){
+            tk = tk.trim();
+            if(tk && tk.indexOf(q) >= 0){ hit = true; gsum += gongsuOf(tk); }
+          });
+        });
+        if(hit) days++;
+      });
+      if(days > 0){
+        sumEl.style.display = "";
+        sumEl.innerHTML = "<b>" + q + "</b> — 작업 <b>" + days + "일</b> · 공수 합계 <b>" + (Math.round(gsum*10)/10) + "</b>";
+      }else sumEl.style.display = "none";
+    }else sumEl.style.display = "none";
+    listEl.innerHTML = "";
+    if(!hits.length){
+      listEl.innerHTML = '<p class="hint">' + (q ? "일치하는 일보가 없어요" : "복사·공유한 일보가 자동으로 여기 쌓여요. 기록은 이 폰에만 저장되니 폰을 바꾸기 전엔 아래 내보내기로 백업해 두세요.") + '</p>';
+      return;
+    }
+    hits.slice(0, 30).forEach(function(e){
+      var row = document.createElement("div"); row.className = "qrow";
+      var sites = (e.blocks || []).map(function(b){ return b.site; }).filter(Boolean).join(", ");
+      var btn = document.createElement("button"); btn.type = "button";
+      btn.innerHTML = kshortLog(e.d) + " <span>" + (sites || (e.off ? "휴무: " + e.off : "")) + "</span>";
+      btn.addEventListener("click", function(){ row.classList.toggle("open"); });
+      var pre = document.createElement("pre"); pre.textContent = e.t;
+      row.appendChild(btn); row.appendChild(pre);
+      listEl.appendChild(row);
+    });
+  }
+  function kshortLog(v){
+    var p = v.split("-"), d = new Date(+p[0], +p[1]-1, +p[2]);
+    return p[0].slice(2) + "." + (+p[1]) + "." + (+p[2]) + "(" + DAYS[d.getDay()] + ")";
+  }
+  $("r_q").addEventListener("input", renderLog);
+  $("r_export").addEventListener("click", function(){
+    var log = loadLog();
+    if(!log.length){ toastR("내보낼 기록이 없어요"); return; }
+    var txt = log.map(function(e){ return e.t; }).join("\n\n──────────────\n\n");
+    var blob = new Blob([txt], {type: "text/plain"});
+    var name = "현장일보_백업_" + iso(new Date()).replace(/-/g, "") + ".txt";
+    var f = new File([blob], name, {type: "text/plain"});
+    if(navigator.canShare && navigator.canShare({files: [f]})){
+      navigator.share({files: [f]}).catch(function(){});
+    }else{
+      var a = document.createElement("a");
+      a.href = URL.createObjectURL(blob); a.download = name;
+      document.body.appendChild(a); a.click(); a.remove();
+      toastR("저장됨 — 다운로드 폴더 확인");
+    }
+  });
+
+  /* ── 전체 삭제: 오탭 방지 2단계 ── */
+  var resetArm = null;
+  $("r_btnReset").addEventListener("click", function(){
+    var b = this;
+    if(resetArm){
+      clearTimeout(resetArm); resetArm = null;
+      ["r_site","r_crew","r_work","r_tsite","r_tcrew","r_toff"].forEach(function(id){ $(id).value = ""; });
+      $("r_equip").value = "X"; $("r_mat").value = "X";
+      [2,3].forEach(function(n){
+        ["r_site"+n, "r_crew"+n, "r_work"+n].forEach(function(id){ $(id).value = ""; });
+        $("r_equip"+n).value = "X"; $("r_mat"+n).value = "X";
+        $("r_blk"+n).style.display = "none";
+      });
+      $("r_addSite").style.display = "";
+      b.textContent = "전체 삭제";
+      render();
+      toastR("모두 지웠어요 — 새로 작성하세요");
+    }else{
+      b.textContent = "한 번 더 탭하면 삭제";
+      resetArm = setTimeout(function(){ resetArm = null; b.textContent = "전체 삭제"; }, 3000);
+    }
+  });
+
+  function finalize(){ learn(); savePlan(); saveReport(); saveLog(); renderChips(); renderLog(); }
 
   function toastR(m){
     var t = document.getElementById("toast");
@@ -1230,7 +1347,7 @@
   $("r_mFull").addEventListener("click", function(){ setMode("full"); });
   $("r_mSimple").addEventListener("click", function(){ setMode("simple"); });
 
-  renderChips(); render();
+  renderChips(); render(); renderLog();
 })();
 </script>
 <script>
