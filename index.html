@@ -162,7 +162,7 @@
   <div class="tag">제작시안</div>
   <div class="tt">
     <h1>현장 도구</h1>
-    <p>그레이팅 · 철제엣지 · 현장일보 · 영수증 <span style="color:var(--acc); font-weight:700;">v11</span></p>
+    <p>그레이팅 · 철제엣지 · 현장일보 · 영수증 <span style="color:var(--acc); font-weight:700;">v13</span></p>
   </div>
 </header>
 
@@ -298,6 +298,10 @@
           <div class="fld full"><label>작업인원</label><input id="r_crew2" type="text"></div>
           <div class="chips" id="r_c_crew2"></div>
           <div class="chips gongsu" data-for="r_crew2"></div>
+          <div class="fld full rw"><label>작업장비</label><input id="r_equip2" type="text" value="X"></div>
+          <div class="chips rw" id="r_c_equip2"></div>
+          <div class="fld full rw"><label>농장자재</label><input id="r_mat2" type="text" value="X"></div>
+          <div class="chips rw" id="r_c_mat2"></div>
           <div class="fld full rw"><label>작업내용</label><input id="r_work2" type="text"></div>
           <div class="chips rw" id="r_c_work2"></div>
         </div>
@@ -310,6 +314,10 @@
           <div class="fld full"><label>작업인원</label><input id="r_crew3" type="text"></div>
           <div class="chips" id="r_c_crew3"></div>
           <div class="chips gongsu" data-for="r_crew3"></div>
+          <div class="fld full rw"><label>작업장비</label><input id="r_equip3" type="text" value="X"></div>
+          <div class="chips rw" id="r_c_equip3"></div>
+          <div class="fld full rw"><label>농장자재</label><input id="r_mat3" type="text" value="X"></div>
+          <div class="chips rw" id="r_c_mat3"></div>
           <div class="fld full rw"><label>작업내용</label><input id="r_work3" type="text"></div>
           <div class="chips rw" id="r_c_work3"></div>
         </div>
@@ -960,11 +968,13 @@
   }
   function blkOn(n){ return $("r_blk"+n).style.display !== "none"; }
   function siteBlocks(){
-    var out = [{site:$("r_site").value.trim(), crew:$("r_crew").value.trim(), work:$("r_work").value.trim()}];
+    var out = [{site:$("r_site").value.trim(), crew:$("r_crew").value.trim(), work:$("r_work").value.trim(),
+      equip:$("r_equip").value.trim(), mat:$("r_mat").value.trim()}];
     [2,3].forEach(function(n){
       if(blkOn(n)){
         var st = $("r_site"+n).value.trim(), cw = $("r_crew"+n).value.trim(), wk = $("r_work"+n).value.trim();
-        if(st || cw || wk) out.push({site:st, crew:cw, work:wk});
+        if(st || cw || wk) out.push({site:st, crew:cw, work:wk,
+          equip:$("r_equip"+n).value.trim(), mat:$("r_mat"+n).value.trim()});
       }
     });
     return out;
@@ -982,12 +992,12 @@
           blocks.forEach(function(b){ s += "\n" + b.site + (b.crew ? ": " + b.crew : ""); });
         }else{
           blocks.forEach(function(b, i){
-            s += "\n\n■ " + (b.site || ("현장" + (i+1)));
+            s += "\n\n" + (b.site || ("현장" + (i+1)));
             s += "\n-작업인원: " + (b.crew || "X");
+            s += "\n-작업장비: " + (b.equip || "X");
             s += "\n-작업내용: " + (b.work || "X");
+            s += "\n-농장자재: " + (b.mat || "X");
           });
-          s += "\n\n-작업장비: " + ($("r_equip").value.trim() || "X");
-          s += "\n-농장자재: " + ($("r_mat").value.trim() || "X");
         }
       }else{
         s = kdate($("r_date").value) + " " + st + "\n";
@@ -1008,7 +1018,7 @@
     return s;
   }
   function render(){ $("r_out").textContent = build(); }
-  ["r_date","r_site","r_crew","r_equip","r_mat","r_work","r_tdate","r_tsite","r_tcrew","r_toff","r_site2","r_crew2","r_work2","r_site3","r_crew3","r_work3"]
+  ["r_date","r_site","r_crew","r_equip","r_mat","r_work","r_tdate","r_tsite","r_tcrew","r_toff","r_site2","r_crew2","r_work2","r_equip2","r_mat2","r_site3","r_crew3","r_work3","r_equip3","r_mat3"]
     .forEach(function(id){ $(id).addEventListener("input", render); });
 
   /* ── 기억 저장소 (필드별) ── */
@@ -1048,9 +1058,13 @@
     ["r_c_toff",  "rb_names", "r_toff",  "append", "n"],
     ["r_c_site2", "rb_site",  "r_site2", "set",    "t"],
     ["r_c_crew2", "rb_names", "r_crew2", "append", "n"],
+    ["r_c_equip2","rb_equip", "r_equip2","append", "n"],
+    ["r_c_mat2",  "rb_mat",   "r_mat2",  "append", "n"],
     ["r_c_work2", "rb_work",  "r_work2", "append", "n"],
     ["r_c_site3", "rb_site",  "r_site3", "set",    "t"],
     ["r_c_crew3", "rb_names", "r_crew3", "append", "n"],
+    ["r_c_equip3","rb_equip", "r_equip3","append", "n"],
+    ["r_c_mat3",  "rb_mat",   "r_mat3",  "append", "n"],
     ["r_c_work3", "rb_work",  "r_work3", "append", "n"]
   ];
   function renderChips(){
@@ -1085,8 +1099,8 @@
     bump("rb_site",  [$("r_site").value, $("r_tsite").value, $("r_site2").value, $("r_site3").value]);
     bump("rb_names", ($("r_crew").value + "," + $("r_tcrew").value + "," + $("r_toff").value + "," + $("r_crew2").value + "," + $("r_crew3").value)
       .split(",").map(function(t){ return t.replace(/\s+[01]\.\d\s*$/, ""); }));
-    bump("rb_equip", $("r_equip").value.split(","));
-    bump("rb_mat",   $("r_mat").value.split(","));
+    bump("rb_equip", ($("r_equip").value + "," + $("r_equip2").value + "," + $("r_equip3").value).split(","));
+    bump("rb_mat",   ($("r_mat").value + "," + $("r_mat2").value + "," + $("r_mat3").value).split(","));
     bump("rb_work",  ($("r_work").value + "," + $("r_work2").value + "," + $("r_work3").value).split(","));
   }
 
@@ -1113,7 +1127,9 @@
         site: $("r_site").value, crew: $("r_crew").value,
         equip: $("r_equip").value, mat: $("r_mat").value, work: $("r_work").value,
         site2: $("r_site2").value, crew2: $("r_crew2").value, work2: $("r_work2").value,
-        site3: $("r_site3").value, crew3: $("r_crew3").value, work3: $("r_work3").value
+        equip2: $("r_equip2").value, mat2: $("r_mat2").value,
+        site3: $("r_site3").value, crew3: $("r_crew3").value, work3: $("r_work3").value,
+        equip3: $("r_equip3").value, mat3: $("r_mat3").value
       }));
     }catch(e){}
   }
@@ -1127,6 +1143,7 @@
     [2,3].forEach(function(n){
       var st = r["site"+n] || "", cw = r["crew"+n] || "", wk = r["work"+n] || "";
       $("r_site"+n).value = st; $("r_crew"+n).value = cw; $("r_work"+n).value = wk;
+      $("r_equip"+n).value = r["equip"+n] || "X"; $("r_mat"+n).value = r["mat"+n] || "X";
       var on = !!(st || cw || wk);
       $("r_blk"+n).style.display = on ? "" : "none";
     });
@@ -1173,6 +1190,7 @@
     b.addEventListener("click", function(){
       var n = b.getAttribute("data-blk");
       ["r_site"+n, "r_crew"+n, "r_work"+n].forEach(function(id){ $(id).value = ""; });
+      $("r_equip"+n).value = "X"; $("r_mat"+n).value = "X";
       $("r_blk"+n).style.display = "none";
       $("r_addSite").style.display = "";
       render();
