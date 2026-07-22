@@ -175,7 +175,7 @@
   <div class="tag">제작시안</div>
   <div class="tt">
     <h1>현장 도구</h1>
-    <p>그레이팅 · 철제엣지 · 현장일보 · 영수증 <span style="color:var(--acc); font-weight:700;">v20</span></p>
+    <p>그레이팅 · 철제엣지 · 현장일보 · 영수증 <span style="color:var(--acc); font-weight:700;">v21</span></p>
   </div>
 </header>
 
@@ -1192,7 +1192,9 @@
       var log = loadLog();
       var d = $("r_date").value;
       if(!d) return;
-      var entry = {d: d, t: build(), blocks: (rMode === "full" ? siteBlocks() : []), off: $("r_toff").value.trim()};
+      var todayTxt = build().split("\n\n내일일정")[0].trim();
+      if(!todayTxt || rMode !== "full") return;  /* 내일일정만 있는 공지는 기록에서 제외 */
+      var entry = {d: d, t: todayTxt, blocks: siteBlocks()};
       var i;
       for(i = 0; i < log.length; i++){ if(log[i].d === d) break; }
       if(i < log.length) log[i] = entry; else log.push(entry);
@@ -1243,7 +1245,7 @@
       var row = document.createElement("div"); row.className = "qrow";
       var sites = (e.blocks || []).map(function(b){ return b.site; }).filter(Boolean).join(", ");
       var btn = document.createElement("button"); btn.type = "button";
-      btn.innerHTML = kshortLog(e.d) + " <span>" + (sites || (e.off ? "휴무: " + e.off : "")) + "</span>";
+      btn.innerHTML = kshortLog(e.d) + " <span>" + sites + "</span>";
       btn.addEventListener("click", function(){ row.classList.toggle("open"); });
       var pre = document.createElement("pre"); pre.textContent = e.t;
       row.appendChild(btn); row.appendChild(pre);
