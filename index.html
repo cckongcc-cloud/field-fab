@@ -175,7 +175,7 @@
   <div class="tag">제작시안</div>
   <div class="tt">
     <h1>현장 도구</h1>
-    <p>그레이팅 · 철제엣지 · 현장일보 · 영수증 <span style="color:var(--acc); font-weight:700;">v21</span></p>
+    <p>그레이팅 · 철제엣지 · 현장일보 · 영수증 <span style="color:var(--acc); font-weight:700;">v22</span></p>
   </div>
 </header>
 
@@ -1186,7 +1186,22 @@
   });
 
   /* ── 일보 기록 저장·검색 ── */
-  function loadLog(){ try{ return JSON.parse(localStorage.getItem("rb_log") || "[]"); }catch(e){ return []; } }
+  function loadLog(){
+    var raw;
+    try{ raw = JSON.parse(localStorage.getItem("rb_log") || "[]"); }catch(e){ return []; }
+    /* 옛 버전이 저장한 내일일정 섞인 기록 정리 */
+    var changed = false, out = [];
+    raw.forEach(function(e){
+      if(!e || !e.d) { changed = true; return; }
+      var t = (e.t || "").split("\n\n내일일정")[0].trim();
+      if(t.indexOf("내일일정") === 0) t = "";
+      if(!t){ changed = true; return; }
+      if(t !== e.t || e.off !== undefined){ changed = true; }
+      out.push({d: e.d, t: t, blocks: e.blocks || []});
+    });
+    if(changed){ try{ localStorage.setItem("rb_log", JSON.stringify(out)); }catch(e2){} }
+    return out;
+  }
   function saveLog(){
     try{
       var log = loadLog();
