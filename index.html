@@ -175,7 +175,7 @@
   <div class="tag">제작시안</div>
   <div class="tt">
     <h1>현장 도구</h1>
-    <p>그레이팅 · 철제엣지 · 현장일보 · 영수증 <span style="color:var(--acc); font-weight:700;">v19</span></p>
+    <p>그레이팅 · 철제엣지 · 현장일보 · 영수증 <span style="color:var(--acc); font-weight:700;">v20</span></p>
   </div>
 </header>
 
@@ -1202,8 +1202,13 @@
     }catch(e){}
   }
   function gongsuOf(token){
+    /* "삼희건축 2명" → 2공수, "에스타일 5명 0.5" → 2.5공수, "공철민 0.5" → 0.5공수 */
+    var head = 1;
+    var hm = token.match(/([0-9]+)\s*명/);
+    if(hm) head = parseInt(hm[1], 10) || 1;
     var m = token.match(/\s([0-9]*\.?[0-9]+)\s*$/);
-    return m ? parseFloat(m[1]) : 1;
+    var rate = m ? parseFloat(m[1]) : 1;
+    return head * rate;
   }
   function renderLog(){
     var q = $("r_q").value.trim();
