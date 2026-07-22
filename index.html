@@ -175,7 +175,7 @@
   <div class="tag">제작시안</div>
   <div class="tt">
     <h1>현장 도구</h1>
-    <p>그레이팅 · 철제엣지 · 현장일보 · 영수증 <span style="color:var(--acc); font-weight:700;">v17</span></p>
+    <p>그레이팅 · 철제엣지 · 현장일보 · 영수증 <span style="color:var(--acc); font-weight:700;">v19</span></p>
   </div>
 </header>
 
@@ -363,8 +363,29 @@
     <h2>지난 일보 검색</h2>
     <div class="fld"><label>업체·현장·작업내용으로 검색</label><input id="r_q" type="text" placeholder="예) 에스타일"></div>
     <div id="r_qsum"></div>
+    <div id="r_settle" style="display:none;">
+      <div class="grid">
+        <div class="fld"><label>공수당 단가 (원·선택)</label><input id="r_rate" type="number" inputmode="numeric" placeholder="예) 250000"></div>
+        <div class="fld" style="display:flex; align-items:flex-end; gap:6px;">
+          <button id="r_stCopy" type="button" style="flex:1; background:#2A2E33; border:1px solid var(--line); color:var(--txt); border-radius:8px; padding:11px 4px; font-size:13px; font-weight:800;">정산서 복사</button>
+          <button id="r_stShare" type="button" style="flex:1; background:var(--acc); border:none; color:#1A1A1A; border-radius:8px; padding:11px 4px; font-size:13px; font-weight:800;">공유</button>
+        </div>
+      </div>
+    </div>
     <div id="r_qlist"><p class="hint">복사·공유한 일보가 자동으로 여기 쌓여요. 기록은 이 폰에만 저장되니 폰을 바꾸기 전엔 아래 내보내기로 백업해 두세요.</p></div>
     <button id="r_export" type="button">전체 기록 내보내기 (백업)</button>
+  </div>
+  <div class="card">
+    <h2>월 결산 (업체별 전체)</h2>
+    <div class="grid">
+      <div class="fld"><label>대상 월</label><input id="r_mon" type="month"></div>
+      <div class="fld"><label>공수당 단가 (원·선택)</label><input id="r_monRate" type="number" inputmode="numeric" placeholder="예) 250000"></div>
+    </div>
+    <div id="r_monList" style="margin-top:8px;"></div>
+    <div style="display:flex; gap:8px; margin-top:10px;">
+      <button id="r_monCopy" type="button" style="flex:1; background:#2A2E33; border:1px solid var(--line); color:var(--txt); border-radius:8px; padding:12px 4px; font-size:13.5px; font-weight:800;">결산표 복사</button>
+      <button id="r_monShare" type="button" style="flex:1; background:var(--acc); border:none; color:#1A1A1A; border-radius:8px; padding:12px 4px; font-size:13.5px; font-weight:800;">공유</button>
+    </div>
   </div>
 </main>
 <div class="bar">
@@ -1205,8 +1226,9 @@
       if(days > 0){
         sumEl.style.display = "";
         sumEl.innerHTML = "<b>" + q + "</b> — 작업 <b>" + days + "일</b> · 공수 합계 <b>" + (Math.round(gsum*10)/10) + "</b>";
-      }else sumEl.style.display = "none";
-    }else sumEl.style.display = "none";
+        $("r_settle").style.display = "";
+      }else{ sumEl.style.display = "none"; $("r_settle").style.display = "none"; }
+    }else{ sumEl.style.display = "none"; $("r_settle").style.display = "none"; }
     listEl.innerHTML = "";
     if(!hits.length){
       listEl.innerHTML = '<p class="hint">' + (q ? "일치하는 일보가 없어요" : "복사·공유한 일보가 자동으로 여기 쌓여요. 기록은 이 폰에만 저장되니 폰을 바꾸기 전엔 아래 내보내기로 백업해 두세요.") + '</p>';
@@ -1228,6 +1250,134 @@
     return p[0].slice(2) + "." + (+p[1]) + "." + (+p[2]) + "(" + DAYS[d.getDay()] + ")";
   }
   $("r_q").addEventListener("input", renderLog);
+
+  /* ── 월 결산: 그 달 전체 업체·인원 집계 ── */
+  (function(){
+    var n = new Date();
+    $("r_mon").value = n.getFullYear() + "-" + ("0"+(n.getMonth()+1)).slice(-2);
+  })();
+  function monthAgg(){
+    var mv = $("r_mon").value;
+    var rows = {}, allDays = {};
+    if(!mv) return {rows: rows, days: 0};
+    loadLog().forEach(function(e){
+      if(e.d.slice(0, 7) !== mv) return;
+      var counted = false;
+      (e.blocks || []).forEach(function(b){
+        (b.crew || "").split(",").forEach(function(tk){
+          tk = tk.trim(); if(!tk) return;
+          var name = tk.replace(/\s+[0-9]*\.?[0-9]+\s*$/, "").trim();
+          if(!name) return;
+          if(!rows[name]) rows[name] = {g: 0, d: {}};
+          rows[name].g += gongsuOf(tk);
+          rows[name].d[e.d] = 1;
+          counted = true;
+        });
+      });
+      if(counted) allDays[e.d] = 1;
+    });
+    return {rows: rows, days: Object.keys(allDays).length};
+  }
+  function r1(x){ return Math.round(x*10)/10; }
+  function buildMonth(){
+    var mv = $("r_mon").value;
+    if(!mv) return "";
+    var agg = monthAgg();
+    var names = Object.keys(agg.rows);
+    if(!names.length) return "";
+    names.sort(function(a,b){ return agg.rows[b].g - agg.rows[a].g; });
+    var p = mv.split("-");
+    var s = "[" + (+p[0]) + "년 " + (+p[1]) + "월 결산]";
+    var rate = parseFloat($("r_monRate").value);
+    var tot = 0;
+    names.forEach(function(nm){
+      var r = agg.rows[nm], dcnt = Object.keys(r.d).length;
+      tot += r.g;
+      var line = "\n" + nm + " — " + dcnt + "일 / 공수 " + r1(r.g);
+      if(rate > 0) line += " / " + Math.round(r.g * rate).toLocaleString("ko-KR") + "원";
+      s += line;
+    });
+    s += "\n\n작업일수 " + agg.days + "일 · 총 공수 " + r1(tot);
+    if(rate > 0) s += "\n총액 " + Math.round(tot * rate).toLocaleString("ko-KR") + "원";
+    return s;
+  }
+  function renderMonth(){
+    var el = $("r_monList");
+    var agg = monthAgg();
+    var names = Object.keys(agg.rows);
+    if(!names.length){ el.innerHTML = '<p class="hint">이 달에 저장된 일보가 없어요</p>'; return; }
+    names.sort(function(a,b){ return agg.rows[b].g - agg.rows[a].g; });
+    var rate = parseFloat($("r_monRate").value);
+    var tot = 0, h = "";
+    names.forEach(function(nm){
+      var r = agg.rows[nm], dcnt = Object.keys(r.d).length;
+      tot += r.g;
+      h += '<div style="display:flex; justify-content:space-between; gap:8px; padding:7px 0; border-bottom:1px solid var(--line); font-size:13.5px;">'
+         + '<span>' + nm + '</span><span style="color:var(--sub);">' + dcnt + '일 · 공수 <b style="color:var(--acc);">' + r1(r.g) + '</b>'
+         + (rate > 0 ? ' · ' + Math.round(r.g*rate).toLocaleString("ko-KR") + '원' : '') + '</span></div>';
+    });
+    h += '<div style="padding:9px 0 0; font-size:13.5px; font-weight:800;">작업일수 ' + agg.days + '일 · 총 공수 <span style="color:var(--acc);">' + r1(tot) + '</span>'
+       + (rate > 0 ? ' · 총액 ' + Math.round(tot*rate).toLocaleString("ko-KR") + '원' : '') + '</div>';
+    el.innerHTML = h;
+  }
+  $("r_mon").addEventListener("input", renderMonth);
+  $("r_monRate").addEventListener("input", renderMonth);
+  $("r_monCopy").addEventListener("click", function(){
+    var t = buildMonth();
+    if(!t){ toastR("이 달에 저장된 일보가 없어요"); return; }
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(t).then(function(){ toastR("결산표 복사 완료"); }, function(){ fallbackCopy(t); });
+    }else fallbackCopy(t);
+  });
+  $("r_monShare").addEventListener("click", function(){
+    var t = buildMonth();
+    if(!t){ toastR("이 달에 저장된 일보가 없어요"); return; }
+    if(navigator.share){ navigator.share({text: t}).catch(function(){}); }
+    else toastR("공유 미지원 — 복사를 이용하세요");
+  });
+
+  /* ── 정산서 생성 ── */
+  function buildSettle(){
+    var q = $("r_q").value.trim();
+    if(!q) return "";
+    var log = loadLog();
+    var lines = [], days = 0, gsum = 0;
+    log.forEach(function(e){
+      var hit = false;
+      (e.blocks || []).forEach(function(b){
+        (b.crew || "").split(",").forEach(function(tk){
+          tk = tk.trim();
+          if(tk && tk.indexOf(q) >= 0){
+            hit = true; gsum += gongsuOf(tk);
+            lines.push(kshortLog(e.d) + " " + (b.site || "-") + " — " + tk);
+          }
+        });
+      });
+      if(hit) days++;
+    });
+    if(!lines.length) return "";
+    var s = "[" + q + " 정산]\n" + lines.join("\n");
+    s += "\n합계: " + days + "일 / 공수 " + (Math.round(gsum*10)/10);
+    var rate = parseFloat($("r_rate").value);
+    if(rate > 0){
+      var amt = Math.round(gsum * rate);
+      s += "\n금액: " + amt.toLocaleString("ko-KR") + "원 (공수 " + (Math.round(gsum*10)/10) + " × " + rate.toLocaleString("ko-KR") + "원)";
+    }
+    return s;
+  }
+  $("r_stCopy").addEventListener("click", function(){
+    var t = buildSettle();
+    if(!t){ toastR("검색된 내역이 없어요"); return; }
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(t).then(function(){ toastR("정산서 복사 완료"); }, function(){ fallbackCopy(t); });
+    }else fallbackCopy(t);
+  });
+  $("r_stShare").addEventListener("click", function(){
+    var t = buildSettle();
+    if(!t){ toastR("검색된 내역이 없어요"); return; }
+    if(navigator.share){ navigator.share({text: t}).catch(function(){}); }
+    else toastR("공유 미지원 — 복사를 이용하세요");
+  });
   $("r_export").addEventListener("click", function(){
     var log = loadLog();
     if(!log.length){ toastR("내보낼 기록이 없어요"); return; }
@@ -1268,7 +1418,7 @@
     }
   });
 
-  function finalize(){ learn(); savePlan(); saveReport(); saveLog(); renderChips(); renderLog(); }
+  function finalize(){ learn(); savePlan(); saveReport(); saveLog(); renderChips(); renderLog(); renderMonth(); }
 
   function toastR(m){
     var t = document.getElementById("toast");
@@ -1347,7 +1497,7 @@
   $("r_mFull").addEventListener("click", function(){ setMode("full"); });
   $("r_mSimple").addEventListener("click", function(){ setMode("simple"); });
 
-  renderChips(); render(); renderLog();
+  renderChips(); render(); renderLog(); renderMonth();
 })();
 </script>
 <script>
