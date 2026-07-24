@@ -167,6 +167,27 @@
   #r_qsum b{color:var(--acc);}
   #r_export{width:100%; margin-top:10px; background:#2A2E33; border:1px solid var(--line);
     color:var(--txt); border-radius:10px; padding:12px 6px; font-size:13.5px; font-weight:700;}
+  /* ── 추가공정 ── */
+  #x_cats{display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px;}
+  #x_cats button{background:#15171A; border:1px solid var(--line); color:var(--sub);
+    border-radius:14px; padding:8px 12px; font-size:12.5px; font-weight:700;}
+  #x_cats button.on{background:var(--acc); border-color:var(--acc); color:#1A1A1A;}
+  .xchk{display:flex; align-items:center; gap:8px; padding:8px 0; border-bottom:1px solid var(--line);}
+  .xchk span{flex:1; font-size:13px; line-height:1.45;}
+  .xchk button{background:#15171A; border:1px solid var(--acc); color:var(--acc);
+    border-radius:8px; padding:7px 11px; font-size:12px; font-weight:800; white-space:nowrap;}
+  .xitem{border:1px solid var(--line); border-radius:8px; padding:9px; margin-bottom:7px; background:#15171A;}
+  .xitem .xtop{display:flex; gap:8px; align-items:center; margin-bottom:7px;}
+  .xitem .xtop b{flex:1; font-size:13.5px; font-weight:700;}
+  .xitem .xtop button{background:#1F2226; border:1px solid var(--line); color:var(--sub);
+    border-radius:7px; padding:6px 9px; font-size:11.5px; font-weight:700;}
+  .xitem .xrow{display:grid; grid-template-columns:1fr 1fr 1.3fr; gap:6px;}
+  .xitem input{width:100%; background:#101214; border:1px solid var(--line); border-radius:7px;
+    color:var(--txt); font-size:15px; padding:8px; font-weight:600;}
+  .xitem .xamt{text-align:right; font-size:13px; color:var(--acc); font-weight:800; margin-top:6px;}
+  #x_total{background:#15171A; border:1px dashed var(--acc); border-radius:8px;
+    padding:10px 12px; margin-top:8px; font-size:14px; line-height:1.8;}
+  #x_total b{color:var(--acc);}
 </style>
 </head>
 <body>
@@ -175,7 +196,7 @@
   <div class="tag">제작시안</div>
   <div class="tt">
     <h1>현장 도구</h1>
-    <p>그레이팅 · 철제엣지 · 현장일보 · 영수증 <span style="color:var(--acc); font-weight:700;">v22</span></p>
+    <p>그레이팅 · 엣지 · 일보 · 영수증 · 추가공정 <span style="color:var(--acc); font-weight:700;">v26</span></p>
   </div>
 </header>
 
@@ -184,6 +205,7 @@
   <button id="tabE" type="button">철제엣지</button>
   <button id="tabR" type="button">현장일보</button>
   <button id="tabP" type="button">영수증</button>
+  <button id="tabX" type="button">추가공정</button>
 </nav>
 
 <div id="pageG">
@@ -350,6 +372,27 @@
       <div class="fld full"><label>인원</label><input id="r_tcrew" type="text" placeholder="예) 공철민,김규근,진영보도 2명"></div>
       <div class="chips" id="r_c_tcrew"></div>
       <div class="chips gongsu" data-for="r_tcrew"></div>
+      <div class="full" id="r_tblk2" style="display:none; border-top:1px dashed var(--line); padding-top:10px;">
+        <div class="switchRow"><span style="color:var(--acc); font-size:13px;">현장 2</span><button type="button" class="tblkdel" data-blk="2" style="background:#15171A; border:1px solid var(--line); color:var(--sub); border-radius:8px; padding:7px 12px; font-size:12px; font-weight:700;">지우기</button></div>
+        <div class="grid">
+          <div class="fld full"><label>현장</label><input id="r_tsite2" type="text"></div>
+          <div class="chips" id="r_c_tsite2"></div>
+          <div class="fld full"><label>인원</label><input id="r_tcrew2" type="text"></div>
+          <div class="chips" id="r_c_tcrew2"></div>
+          <div class="chips gongsu" data-for="r_tcrew2"></div>
+        </div>
+      </div>
+      <div class="full" id="r_tblk3" style="display:none; border-top:1px dashed var(--line); padding-top:10px;">
+        <div class="switchRow"><span style="color:var(--acc); font-size:13px;">현장 3</span><button type="button" class="tblkdel" data-blk="3" style="background:#15171A; border:1px solid var(--line); color:var(--sub); border-radius:8px; padding:7px 12px; font-size:12px; font-weight:700;">지우기</button></div>
+        <div class="grid">
+          <div class="fld full"><label>현장</label><input id="r_tsite3" type="text"></div>
+          <div class="chips" id="r_c_tsite3"></div>
+          <div class="fld full"><label>인원</label><input id="r_tcrew3" type="text"></div>
+          <div class="chips" id="r_c_tcrew3"></div>
+          <div class="chips gongsu" data-for="r_tcrew3"></div>
+        </div>
+      </div>
+      <button id="r_tAddSite" type="button" class="full" style="background:#2A2E33; border:1px dashed var(--sub); color:var(--txt); border-radius:10px; padding:11px 6px; font-size:13.5px; font-weight:800;">+ 현장 추가</button>
       <div class="fld full"><label>휴무</label><input id="r_toff" type="text" placeholder="예) 김규근"></div>
       <div class="chips" id="r_c_toff"></div>
     </div>
@@ -386,6 +429,19 @@
       <button id="r_monCopy" type="button" style="flex:1; background:#2A2E33; border:1px solid var(--line); color:var(--txt); border-radius:8px; padding:12px 4px; font-size:13.5px; font-weight:800;">결산표 복사</button>
       <button id="r_monShare" type="button" style="flex:1; background:var(--acc); border:none; color:#1A1A1A; border-radius:8px; padding:12px 4px; font-size:13.5px; font-weight:800;">공유</button>
     </div>
+  </div>
+  <div class="card">
+    <h2>기간별 작업 요약 (날짜별)</h2>
+    <div class="grid">
+      <div class="fld"><label>시작일</label><input id="r_sumFrom" type="date"></div>
+      <div class="fld"><label>종료일</label><input id="r_sumTo" type="date"></div>
+    </div>
+    <div id="r_sumList" style="margin-top:8px;"></div>
+    <div style="display:flex; gap:8px; margin-top:10px;">
+      <button id="r_sumCopy" type="button" style="flex:1; background:#2A2E33; border:1px solid var(--line); color:var(--txt); border-radius:8px; padding:12px 4px; font-size:13.5px; font-weight:800;">요약 복사</button>
+      <button id="r_sumShare" type="button" style="flex:1; background:var(--acc); border:none; color:#1A1A1A; border-radius:8px; padding:12px 4px; font-size:13.5px; font-weight:800;">공유</button>
+    </div>
+    <p class="hint">날짜별 현장·작업내용 한 줄 요약이에요. 복사해서 네이버 캘린더·메모 등에 붙여넣으세요.</p>
   </div>
 </main>
 <div class="bar">
@@ -425,6 +481,48 @@
   <button id="p_btnClear" type="button">비우기</button>
   <button id="p_btnSaveAll" type="button" style="background:#2A2E33; color:var(--txt); border:1px solid var(--line);">전체 저장</button>
   <button id="p_btnShare" type="button">전체 공유</button>
+</div>
+</div>
+
+<div id="pageX" style="display:none">
+<main>
+  <div class="card">
+    <h2>현장</h2>
+    <div class="fld"><input id="x_site" type="text" placeholder="예) 김포 운양동1256-1"></div>
+    <div class="chips" id="x_c_site"></div>
+    <p class="hint">현장별로 따로 저장돼요. 현장명을 바꾸면 그 현장 목록이 열려요.</p>
+  </div>
+
+  <div class="card">
+    <h2>공정 선택 — 놓치기 쉬운 항목</h2>
+    <div id="x_cats"></div>
+    <div id="x_chk"></div>
+    <div class="fld" style="margin-top:10px;"><label>이 공정에 내가 추가할 체크항목</label><input id="x_myChk" type="text" placeholder="현장에서 겪은 누락 항목 입력 후 엔터"></div>
+  </div>
+
+  <div class="card">
+    <h2>추가공정 항목</h2>
+    <div id="x_list"></div>
+    <div style="margin-top:10px;">
+      <div class="switchRow" style="margin-bottom:6px;">
+        <span style="font-size:12px; color:var(--acc); letter-spacing:1px;">저장된 단가 — 탭하면 불러오기</span>
+        <button id="x_mgr" type="button" style="background:#15171A; border:1px solid var(--line); color:var(--sub); border-radius:8px; padding:6px 10px; font-size:11.5px; font-weight:700;">단가장 관리</button>
+      </div>
+      <div class="chips" id="x_book"></div>
+      <div id="x_bookMgr" style="display:none; margin-top:6px;"></div>
+    </div>
+    <button id="x_add" type="button" style="width:100%; margin-top:8px; background:#2A2E33; border:1px dashed var(--sub); color:var(--txt); border-radius:10px; padding:12px 6px; font-size:14px; font-weight:800;">+ 항목 직접 추가</button>
+    <div class="grid" style="margin-top:10px;">
+      <div class="fld"><label>경비·이윤 (%)</label><input id="x_rate" type="number" inputmode="decimal" value="10"></div>
+      <div class="fld"><label>부가세</label><div class="seg" style="margin-top:2px;"><button id="x_vatN" type="button" class="on">별도</button><button id="x_vatY" type="button">포함</button></div></div>
+    </div>
+    <div id="x_total"></div>
+  </div>
+</main>
+<div class="bar">
+  <button id="x_clear" type="button" style="background:#15171A; color:var(--red); border:1px solid var(--red);">비우기</button>
+  <button id="x_copy" type="button" style="background:#2A2E33; color:var(--txt); border:1px solid var(--line);">견적 복사</button>
+  <button id="x_share" type="button" style="background:var(--acc); color:#1A1A1A;">공유</button>
 </div>
 </div>
 
@@ -1020,6 +1118,19 @@
     });
     return out;
   }
+  function tblkOn(n){ return $("r_tblk"+n).style.display !== "none"; }
+  function tomorrowBlocks(){
+    var out = [];
+    var s0 = $("r_tsite").value.trim(), c0 = $("r_tcrew").value.trim();
+    if(s0 || c0) out.push({site: s0, crew: c0});
+    [2,3].forEach(function(n){
+      if(tblkOn(n)){
+        var st = $("r_tsite"+n).value.trim(), cw = $("r_tcrew"+n).value.trim();
+        if(st || cw) out.push({site: st, crew: cw});
+      }
+    });
+    return out;
+  }
   function build(){
     var s = "";
     if(rMode === "full"){
@@ -1043,16 +1154,16 @@
         s += "-농장자재: " + ($("r_mat").value.trim() || "X");
       }
     }
-    var ts = $("r_tsite").value.trim(), tc = $("r_tcrew").value.trim(), toff = $("r_toff").value.trim();
-    if(ts || tc || toff){
+    var tbs = tomorrowBlocks(), toff = $("r_toff").value.trim();
+    if(tbs.length || toff){
       s += (s ? "\n\n" : "") + "내일일정  " + kdate($("r_tdate").value);
-      if(ts || tc) s += "\n" + ts + (tc ? ": " + tc : "");
+      tbs.forEach(function(b){ s += "\n" + b.site + (b.crew ? ": " + b.crew : ""); });
       if(toff) s += "\n휴무: " + toff;
     }
     return s;
   }
   function render(){ $("r_out").textContent = build(); }
-  ["r_date","r_site","r_crew","r_equip","r_mat","r_work","r_tdate","r_tsite","r_tcrew","r_toff","r_site2","r_crew2","r_work2","r_equip2","r_mat2","r_site3","r_crew3","r_work3","r_equip3","r_mat3"]
+  ["r_date","r_site","r_crew","r_equip","r_mat","r_work","r_tdate","r_tsite","r_tcrew","r_toff","r_tsite2","r_tcrew2","r_tsite3","r_tcrew3","r_site2","r_crew2","r_work2","r_equip2","r_mat2","r_site3","r_crew3","r_work3","r_equip3","r_mat3"]
     .forEach(function(id){ $(id).addEventListener("input", render); });
 
   /* ── 기억 저장소 (필드별) ── */
@@ -1090,6 +1201,10 @@
     ["r_c_tsite", "rb_site",  "r_tsite", "set",    "t"],
     ["r_c_tcrew", "rb_names", "r_tcrew", "append", "n"],
     ["r_c_toff",  "rb_names", "r_toff",  "append", "n"],
+    ["r_c_tsite2","rb_site",  "r_tsite2","set",    "t"],
+    ["r_c_tcrew2","rb_names", "r_tcrew2","append", "n"],
+    ["r_c_tsite3","rb_site",  "r_tsite3","set",    "t"],
+    ["r_c_tcrew3","rb_names", "r_tcrew3","append", "n"],
     ["r_c_site2", "rb_site",  "r_site2", "set",    "t"],
     ["r_c_crew2", "rb_names", "r_crew2", "append", "n"],
     ["r_c_equip2","rb_equip", "r_equip2","append", "n"],
@@ -1130,8 +1245,8 @@
     });
   }
   function learn(){
-    bump("rb_site",  [$("r_site").value, $("r_tsite").value, $("r_site2").value, $("r_site3").value]);
-    bump("rb_names", ($("r_crew").value + "," + $("r_tcrew").value + "," + $("r_toff").value + "," + $("r_crew2").value + "," + $("r_crew3").value)
+    bump("rb_site",  [$("r_site").value, $("r_tsite").value, $("r_site2").value, $("r_site3").value, $("r_tsite2").value, $("r_tsite3").value]);
+    bump("rb_names", ($("r_crew").value + "," + $("r_tcrew").value + "," + $("r_toff").value + "," + $("r_crew2").value + "," + $("r_crew3").value + "," + $("r_tcrew2").value + "," + $("r_tcrew3").value)
       .split(",").map(function(t){ return t.replace(/\s+[01]\.\d\s*$/, ""); }));
     bump("rb_equip", ($("r_equip").value + "," + $("r_equip2").value + "," + $("r_equip3").value).split(","));
     bump("rb_mat",   ($("r_mat").value + "," + $("r_mat2").value + "," + $("r_mat3").value).split(","));
@@ -1142,14 +1257,24 @@
   try{
     var plan = JSON.parse(localStorage.getItem("rb_plan") || "null");
     if(plan && plan.date === iso(today)){
-      if(plan.site && !$("r_site").value) $("r_site").value = plan.site;
-      if(plan.crew && !$("r_crew").value) $("r_crew").value = plan.crew;
+      var pl = plan.list && plan.list.length ? plan.list : [{site: plan.site, crew: plan.crew}];
+      if(!$("r_site").value && !$("r_crew").value){
+        if(pl[0]){ $("r_site").value = pl[0].site || ""; $("r_crew").value = pl[0].crew || ""; }
+        [1,2].forEach(function(i){
+          var b = pl[i]; if(!b) return;
+          var n = i + 1;
+          $("r_site"+n).value = b.site || ""; $("r_crew"+n).value = b.crew || "";
+          $("r_blk"+n).style.display = "";
+        });
+        if(pl.length > 2) $("r_addSite").style.display = "none";
+      }
     }
   }catch(e){}
   function savePlan(){
     try{
       localStorage.setItem("rb_plan", JSON.stringify({
-        date: $("r_tdate").value, site: $("r_tsite").value.trim(), crew: $("r_tcrew").value.trim()
+        date: $("r_tdate").value, site: $("r_tsite").value.trim(), crew: $("r_tcrew").value.trim(),
+        list: tomorrowBlocks()
       }));
     }catch(e){}
   }
@@ -1358,6 +1483,57 @@
     else toastR("공유 미지원 — 복사를 이용하세요");
   });
 
+  /* ── 기간별 작업 요약 (날짜별 한 줄) ── */
+  (function(){
+    var n = new Date(), first = new Date(n.getFullYear(), n.getMonth(), 1);
+    $("r_sumFrom").value = iso(first);
+    $("r_sumTo").value = iso(n);
+  })();
+  function summaryRows(){
+    var f = $("r_sumFrom").value, t = $("r_sumTo").value;
+    var log = loadLog().filter(function(e){
+      return (!f || e.d >= f) && (!t || e.d <= t);
+    }).sort(function(a,b){ return a.d < b.d ? -1 : 1; });
+    return log.map(function(e){
+      var parts = (e.blocks || []).map(function(b){
+        var site = b.site || "";
+        var work = b.work ? " " + b.work : "";
+        return (site + work).trim();
+      }).filter(Boolean);
+      return {d: e.d, txt: parts.join(" / ")};
+    }).filter(function(r){ return r.txt; });
+  }
+  function buildSummary(){
+    var rows = summaryRows();
+    if(!rows.length) return "";
+    return rows.map(function(r){ return kshortLog(r.d) + "  " + r.txt; }).join("\n");
+  }
+  function renderSummary(){
+    var rows = summaryRows();
+    var el = $("r_sumList");
+    if(!rows.length){ el.innerHTML = '<p class="hint">이 기간에 저장된 일보가 없어요</p>'; return; }
+    el.innerHTML = rows.map(function(r){
+      return '<div style="display:flex; gap:10px; padding:7px 0; border-bottom:1px solid var(--line); font-size:13.5px;">'
+        + '<span style="color:var(--acc); font-weight:700; white-space:nowrap;">' + kshortLog(r.d) + '</span>'
+        + '<span>' + r.txt.replace(/</g,"&lt;") + '</span></div>';
+    }).join("");
+  }
+  $("r_sumFrom").addEventListener("input", renderSummary);
+  $("r_sumTo").addEventListener("input", renderSummary);
+  $("r_sumCopy").addEventListener("click", function(){
+    var t = buildSummary();
+    if(!t){ toastR("이 기간에 저장된 일보가 없어요"); return; }
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(t).then(function(){ toastR("요약 복사 완료 — 네이버 등에 붙여넣기"); }, function(){ fallbackCopy(t); });
+    }else fallbackCopy(t);
+  });
+  $("r_sumShare").addEventListener("click", function(){
+    var t = buildSummary();
+    if(!t){ toastR("이 기간에 저장된 일보가 없어요"); return; }
+    if(navigator.share){ navigator.share({text: t}).catch(function(){}); }
+    else toastR("공유 미지원 — 복사를 이용하세요");
+  });
+
   /* ── 정산서 생성 ── */
   function buildSettle(){
     var q = $("r_q").value.trim();
@@ -1423,7 +1599,9 @@
     var b = this;
     if(resetArm){
       clearTimeout(resetArm); resetArm = null;
-      ["r_site","r_crew","r_work","r_tsite","r_tcrew","r_toff"].forEach(function(id){ $(id).value = ""; });
+      ["r_site","r_crew","r_work","r_tsite","r_tcrew","r_toff","r_tsite2","r_tcrew2","r_tsite3","r_tcrew3"].forEach(function(id){ $(id).value = ""; });
+      [2,3].forEach(function(n){ $("r_tblk"+n).style.display = "none"; });
+      $("r_tAddSite").style.display = "";
       $("r_equip").value = "X"; $("r_mat").value = "X";
       [2,3].forEach(function(n){
         ["r_site"+n, "r_crew"+n, "r_work"+n].forEach(function(id){ $(id).value = ""; });
@@ -1440,7 +1618,7 @@
     }
   });
 
-  function finalize(){ learn(); savePlan(); saveReport(); saveLog(); renderChips(); renderLog(); renderMonth(); }
+  function finalize(){ learn(); savePlan(); saveReport(); saveLog(); renderChips(); renderLog(); renderMonth(); renderSummary(); }
 
   function toastR(m){
     var t = document.getElementById("toast");
@@ -1466,6 +1644,23 @@
     var txt = build(); finalize();
     if(navigator.share){ navigator.share({text: txt}).catch(function(){}); }
     else toastR("공유 미지원 — 텍스트 복사를 이용하세요");
+  });
+
+  /* ── 내일 현장 추가·지우기 ── */
+  $("r_tAddSite").addEventListener("click", function(){
+    if(!tblkOn(2)) $("r_tblk2").style.display = "";
+    else if(!tblkOn(3)) $("r_tblk3").style.display = "";
+    if(tblkOn(2) && tblkOn(3)) this.style.display = "none";
+    render();
+  });
+  Array.prototype.forEach.call(document.querySelectorAll(".tblkdel"), function(b){
+    b.addEventListener("click", function(){
+      var n = b.getAttribute("data-blk");
+      $("r_tsite"+n).value = ""; $("r_tcrew"+n).value = "";
+      $("r_tblk"+n).style.display = "none";
+      $("r_tAddSite").style.display = "";
+      render();
+    });
   });
 
   /* ── 현장 추가·지우기 ── */
@@ -1519,7 +1714,7 @@
   $("r_mFull").addEventListener("click", function(){ setMode("full"); });
   $("r_mSimple").addEventListener("click", function(){ setMode("simple"); });
 
-  renderChips(); render(); renderLog(); renderMonth();
+  renderChips(); render(); renderLog(); renderMonth(); renderSummary();
 })();
 </script>
 <script>
@@ -1760,7 +1955,270 @@
 (function(){
   "use strict";
   function $(id){ return document.getElementById(id); }
-  var pages = {G:$("pageG"), E:$("pageE"), R:$("pageR"), P:$("pageP")}, tabs = {G:$("tabG"), E:$("tabE"), R:$("tabR"), P:$("tabP")};
+  function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+  function toastX(m){
+    var t = document.getElementById("toast");
+    t.textContent = m; t.classList.add("show");
+    clearTimeout(t._tm); t._tm = setTimeout(function(){ t.classList.remove("show"); }, 2200);
+  }
+  function nf(n){ return Math.round(n).toLocaleString("ko-KR"); }
+
+  /* 공정별 자주 빠지는 항목 */
+  var BASE = {
+    "타일·석재": ["압착시멘트·줄눈재 등 부자재","커팅 손료 (재단 많은 구간)","구배·물매 확인 (물 고임)","코너·논슬립 등 마감재","줄눈 실링 및 오염 방지 코팅","폐타일·잔재 처리비","양생기간 중 통행 통제"],
+    "블럭·경계석": ["기초 콘크리트·잡석 다짐","곡선부 커팅 손료","되메우기 및 잔토 처리","경계석 뒷채움 콘크리트","기존 포장 절단·철거"],
+    "데크": ["하부 장선·각재 및 기초 받침","스텐 피스·클립 등 부자재","오일스테인 도장 (초기 1회)","단차·물매 처리","하부 방초매트·잡초 대비"],
+    "배수": ["유공관·트렌치 및 부직포","쇄석 채움","집수정·맨홀","기존 우수관 연결부 처리","터파기 잔토 반출"],
+    "자동관수": ["밸브박스·전자밸브","컨트롤러 전원 인출 (전기 별도)","관로 매설 깊이·동파 대비 퇴수","헤드 간격·살수 반경 검토","수압 부족 시 가압 설비"],
+    "정원조명": ["전선관·방수 커넥터","트랜스 용량 여유분","타이머·센서","접지 및 누전차단","기존 분전반까지 배선 거리"],
+    "잔디·식재": ["객토·배수층 조성","초기 관수 및 활착 관리","멀칭·방초 처리","고사 보증 범위 명시","식재 후 잔재·포장재 처리"],
+    "철제·구조물": ["도장 또는 아연도금 사양","앵커·고정철물","용접부 보수도장","운반·양중 (크레인 필요 여부)","현장 실측 후 재제작 리스크"],
+    "공통": ["장비 운반비 (상하차 포함)","자재 상하차 인력","폐기물 처리·반출","가설·양생 자재","재방문 발생 시 인건비","주차·진입로 제약"]
+  };
+  var cat = "타일·석재";
+
+  function loadMy(){ try{ return JSON.parse(localStorage.getItem("xw_mychk") || "{}"); }catch(e){ return {}; } }
+  function saveMy(o){ try{ localStorage.setItem("xw_mychk", JSON.stringify(o)); }catch(e){} }
+  function loadAll(){ try{ return JSON.parse(localStorage.getItem("xw_items") || "{}"); }catch(e){ return {}; } }
+  function saveAll(o){ try{ localStorage.setItem("xw_items", JSON.stringify(o)); }catch(e){} }
+  function siteKey(){ return $("x_site").value.trim() || "(현장 미지정)"; }
+  function items(){ var a = loadAll(); return a[siteKey()] || []; }
+  function setItems(list){ var a = loadAll(); a[siteKey()] = list; saveAll(a); }
+
+  /* 카테고리 버튼 */
+  var cw = $("x_cats");
+  Object.keys(BASE).forEach(function(c){
+    var b = document.createElement("button");
+    b.type = "button"; b.textContent = c;
+    if(c === cat) b.classList.add("on");
+    b.addEventListener("click", function(){
+      cat = c;
+      Array.prototype.forEach.call(cw.children, function(x){ x.classList.remove("on"); });
+      b.classList.add("on");
+      renderChk();
+    });
+    cw.appendChild(b);
+  });
+
+  function renderChk(){
+    var my = loadMy()[cat] || [];
+    var list = BASE[cat].concat(my);
+    $("x_chk").innerHTML = "";
+    list.forEach(function(t, i){
+      var row = document.createElement("div"); row.className = "xchk";
+      var sp = document.createElement("span"); sp.textContent = "· " + t;
+      var b = document.createElement("button"); b.type = "button"; b.textContent = "견적 추가";
+      b.addEventListener("click", function(){
+        var list2 = items();
+        list2.push({n: t, q: 1, u: "식", p: 0});
+        setItems(list2); renderItems();
+        toastX("항목에 추가됨 — 수량·단가를 입력하세요");
+      });
+      row.appendChild(sp); row.appendChild(b);
+      if(i >= BASE[cat].length){
+        var d = document.createElement("button"); d.type="button"; d.textContent = "삭제";
+        d.style.borderColor = "var(--line)"; d.style.color = "var(--sub)";
+        d.addEventListener("click", function(){
+          var m = loadMy(); m[cat] = (m[cat]||[]).filter(function(x){ return x !== t; }); saveMy(m); renderChk();
+        });
+        row.appendChild(d);
+      }
+      $("x_chk").appendChild(row);
+    });
+  }
+  $("x_myChk").addEventListener("keydown", function(e){
+    if(e.key !== "Enter") return;
+    var v = this.value.trim(); if(!v) return;
+    var m = loadMy(); if(!m[cat]) m[cat] = [];
+    if(m[cat].indexOf(v) < 0) m[cat].push(v);
+    saveMy(m); this.value = ""; renderChk();
+  });
+
+  /* ── 단가장 (품목별 단가 기억) ── */
+  function loadBook(){ try{ return JSON.parse(localStorage.getItem("xw_prices") || "{}"); }catch(e){ return {}; } }
+  function saveBook(o){ try{ localStorage.setItem("xw_prices", JSON.stringify(o)); }catch(e){} }
+  function learnPrice(it){
+    if(!it.n || !(it.p > 0)) return;
+    var b = loadBook();
+    var prev = b[it.n];
+    b[it.n] = {u: it.u || (prev ? prev.u : "식"), p: it.p, n: (prev ? prev.n : 0) + 1, t: Date.now()};
+    var keys = Object.keys(b);
+    if(keys.length > 120){
+      keys.sort(function(a,c){ return b[a].t - b[c].t; }).slice(0, keys.length - 120)
+        .forEach(function(k){ delete b[k]; });
+    }
+    saveBook(b);
+    renderBook();
+  }
+  function renderBook(){
+    var b = loadBook();
+    var keys = Object.keys(b).sort(function(a,c){ return (b[c].n - b[a].n) || (b[c].t - b[a].t); });
+    var el = $("x_book");
+    el.innerHTML = "";
+    if(!keys.length){
+      el.innerHTML = '<p class="hint" style="margin:0;">항목에 단가를 입력하면 자동으로 저장돼요. 다음부터는 여기서 탭 한 번으로 불러옵니다.</p>';
+    }
+    keys.slice(0, 12).forEach(function(k){
+      var b2 = document.createElement("button");
+      b2.type = "button";
+      b2.innerHTML = esc(k) + ' <span style="color:var(--acc);">' + nf(b[k].p) + '</span>';
+      b2.addEventListener("click", function(){
+        var list = items();
+        list.push({n: k, q: 1, u: b[k].u || "식", p: b[k].p});
+        setItems(list); renderItems(); calc();
+        toastX(k + " — 단가 불러옴, 물량만 입력하세요");
+      });
+      el.appendChild(b2);
+    });
+    // 관리 목록
+    var mg = $("x_bookMgr");
+    mg.innerHTML = "";
+    keys.forEach(function(k){
+      var row = document.createElement("div"); row.className = "xchk";
+      var sp = document.createElement("span");
+      sp.innerHTML = esc(k) + ' <span style="color:var(--sub);">' + nf(b[k].p) + '원 / ' + esc(b[k].u || "") + '</span>';
+      var d = document.createElement("button"); d.type = "button"; d.textContent = "삭제";
+      d.style.borderColor = "var(--line)"; d.style.color = "var(--sub)";
+      d.addEventListener("click", function(){
+        var bb = loadBook(); delete bb[k]; saveBook(bb); renderBook();
+      });
+      row.appendChild(sp); row.appendChild(d);
+      mg.appendChild(row);
+    });
+  }
+  $("x_mgr").addEventListener("click", function(){
+    var m = $("x_bookMgr");
+    var on = m.style.display === "none";
+    m.style.display = on ? "" : "none";
+    this.textContent = on ? "닫기" : "단가장 관리";
+  });
+
+  /* 항목 목록 */
+  function renderItems(){
+    var list = items(), el = $("x_list");
+    el.innerHTML = "";
+    if(!list.length){ el.innerHTML = '<p class="hint">위 체크리스트에서 추가하거나 아래 버튼으로 직접 넣으세요</p>'; }
+    list.forEach(function(it, idx){
+      var d = document.createElement("div"); d.className = "xitem";
+      var top = document.createElement("div"); top.className = "xtop";
+      var nm = document.createElement("input"); nm.value = it.n; nm.placeholder = "항목명";
+      nm.style.flex = "1"; nm.style.fontSize = "14px";
+      nm.addEventListener("input", function(){
+        it.n = nm.value; setItems(list);
+        var b = loadBook()[it.n.trim()];
+        if(b && !(it.p > 0)){
+          it.p = b.p; it.u = b.u || it.u;
+          pi.value = it.p; ui.value = it.u;
+          setItems(list); calc(); amt.textContent = nf((it.q||0)*(it.p||0)) + "원";
+          toastX("저장된 단가 " + nf(b.p) + "원 적용");
+        }
+      });
+      var del = document.createElement("button"); del.type="button"; del.textContent = "삭제";
+      del.addEventListener("click", function(){ list.splice(idx,1); setItems(list); renderItems(); calc(); });
+      top.appendChild(nm); top.appendChild(del);
+      var row = document.createElement("div"); row.className = "xrow";
+      function mk(val, ph, key, num){
+        var i2 = document.createElement("input");
+        i2.value = val; i2.placeholder = ph;
+        if(num){ i2.type = "number"; i2.setAttribute("inputmode","decimal"); }
+        i2.addEventListener("input", function(){
+          it[key] = num ? (parseFloat(i2.value) || 0) : i2.value;
+          setItems(list); calc(); amt.textContent = nf((it.q||0)*(it.p||0)) + "원";
+          if(key === "p" || key === "u") learnPrice(it);
+        });
+        return i2;
+      }
+      var qi = mk(it.q, "수량", "q", true), ui = mk(it.u, "단위", "u", false), pi = mk(it.p, "단가", "p", true);
+      row.appendChild(qi); row.appendChild(ui); row.appendChild(pi);
+      var amt = document.createElement("div"); amt.className = "xamt";
+      amt.textContent = nf((it.q||0)*(it.p||0)) + "원";
+      d.appendChild(top); d.appendChild(row); d.appendChild(amt);
+      el.appendChild(d);
+    });
+  }
+  $("x_add").addEventListener("click", function(){
+    var list = items(); list.push({n:"", q:1, u:"식", p:0});
+    setItems(list); renderItems(); calc();
+  });
+
+  /* 합계 */
+  var vat = false;
+  function calc(){
+    var list = items();
+    var sub = list.reduce(function(s, it){ return s + (it.q||0)*(it.p||0); }, 0);
+    var rate = parseFloat($("x_rate").value) || 0;
+    var oh = sub * rate / 100;
+    var tot = sub + oh;
+    var h = "소계 <b>" + nf(sub) + "원</b>";
+    if(rate) h += "<br>경비·이윤 " + rate + "% <b>" + nf(oh) + "원</b>";
+    h += "<br>합계 <b>" + nf(tot) + "원</b>";
+    if(vat) h += "<br>부가세 포함 <b>" + nf(tot*1.1) + "원</b>";
+    else h += " <span style='color:var(--sub); font-size:12px;'>(부가세 별도)</span>";
+    $("x_total").innerHTML = h;
+  }
+  $("x_rate").addEventListener("input", calc);
+  $("x_vatN").addEventListener("click", function(){ vat=false; this.classList.add("on"); $("x_vatY").classList.remove("on"); calc(); });
+  $("x_vatY").addEventListener("click", function(){ vat=true; this.classList.add("on"); $("x_vatN").classList.remove("on"); calc(); });
+
+  function buildQuote(){
+    var list = items().filter(function(it){ return it.n; });
+    if(!list.length) return "";
+    var d = new Date();
+    var s = "[추가공정 견적]\n현장: " + siteKey() + "\n" + d.getFullYear() + "." + ("0"+(d.getMonth()+1)).slice(-2) + "." + ("0"+d.getDate()).slice(-2) + "\n";
+    var sub = 0;
+    list.forEach(function(it, i){
+      var a = (it.q||0)*(it.p||0); sub += a;
+      s += "\n" + (i+1) + ". " + it.n + "  " + (it.q||0) + (it.u||"") + " × " + nf(it.p||0) + " = " + nf(a) + "원";
+    });
+    var rate = parseFloat($("x_rate").value) || 0;
+    var oh = sub * rate / 100, tot = sub + oh;
+    s += "\n\n소계 " + nf(sub) + "원";
+    if(rate) s += "\n경비·이윤 " + rate + "% " + nf(oh) + "원";
+    s += "\n합계 " + nf(tot) + "원" + (vat ? "\n부가세 포함 " + nf(tot*1.1) + "원" : " (부가세 별도)");
+    return s;
+  }
+  $("x_copy").addEventListener("click", function(){
+    var t = buildQuote();
+    if(!t){ toastX("견적 항목이 없어요"); return; }
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(t).then(function(){ toastX("견적 복사 완료"); }, function(){ toastX("복사 실패"); });
+    }else toastX("복사 미지원");
+  });
+  $("x_share").addEventListener("click", function(){
+    var t = buildQuote();
+    if(!t){ toastX("견적 항목이 없어요"); return; }
+    if(navigator.share){ navigator.share({text: t}).catch(function(){}); }
+    else toastX("공유 미지원 — 복사를 이용하세요");
+  });
+  var armX = null;
+  $("x_clear").addEventListener("click", function(){
+    var b = this;
+    if(armX){ clearTimeout(armX); armX = null; setItems([]); renderItems(); calc();
+      b.textContent = "비우기"; toastX("이 현장 항목을 모두 지웠어요");
+    }else{ b.textContent = "한 번 더"; armX = setTimeout(function(){ armX=null; b.textContent="비우기"; }, 3000); }
+  });
+
+  /* 현장 칩 */
+  function renderSiteChips(){
+    var o; try{ o = JSON.parse(localStorage.getItem("rb_site") || "{}"); }catch(e){ o = {}; }
+    var keys = Object.keys(o).sort(function(a,b){ return (o[b].t||0) - (o[a].t||0); }).slice(0,8);
+    var el = $("x_c_site"); el.innerHTML = "";
+    keys.forEach(function(n){
+      var b = document.createElement("button"); b.type="button"; b.textContent = n;
+      b.addEventListener("click", function(){ $("x_site").value = n; renderItems(); calc(); });
+      el.appendChild(b);
+    });
+  }
+  $("x_site").addEventListener("input", function(){ renderItems(); calc(); });
+
+  renderSiteChips(); renderChk(); renderItems(); renderBook(); calc();
+})();
+</script>
+<script>
+(function(){
+  "use strict";
+  function $(id){ return document.getElementById(id); }
+  var pages = {G:$("pageG"), E:$("pageE"), R:$("pageR"), P:$("pageP"), X:$("pageX")}, tabs = {G:$("tabG"), E:$("tabE"), R:$("tabR"), P:$("tabP"), X:$("tabX")};
   function show(k){
     Object.keys(pages).forEach(function(x){
       pages[x].style.display = (x===k) ? "" : "none";
@@ -1772,6 +2230,7 @@
   $("tabE").addEventListener("click", function(){ show("E"); });
   $("tabR").addEventListener("click", function(){ show("R"); });
   $("tabP").addEventListener("click", function(){ show("P"); });
+  $("tabX").addEventListener("click", function(){ show("X"); });
 
   /* 현장명·회사명 두 탭 동기화 */
   function link(a, b){
@@ -1791,7 +2250,7 @@
   persist(gS, "fab_site"); persist(gC, "fab_co");
 
   var t=null; try{ t = localStorage.getItem("fab_tab"); }catch(e){}
-  show(t === "E" || t === "R" || t === "P" ? t : "G");
+  show(t === "E" || t === "R" || t === "P" || t === "X" ? t : "G");
 })();
 </script>
 </body>
