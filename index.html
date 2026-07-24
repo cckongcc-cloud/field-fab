@@ -196,7 +196,7 @@
   <div class="tag">제작시안</div>
   <div class="tt">
     <h1>현장 도구</h1>
-    <p>그레이팅 · 엣지 · 일보 · 영수증 · 추가공정 <span style="color:var(--acc); font-weight:700;">v26</span></p>
+    <p>그레이팅 · 엣지 · 일보 · 영수증 · 추가공정 <span style="color:var(--acc); font-weight:700;">v28</span></p>
   </div>
 </header>
 
@@ -1405,43 +1405,65 @@
   })();
   function monthAgg(){
     var mv = $("r_mon").value;
-    var rows = {}, allDays = {};
-    if(!mv) return {rows: rows, days: 0};
+    var sites = {}, crews = {}, allDays = {};
+    if(!mv) return {sites: sites, crews: crews, days: 0};
     loadLog().forEach(function(e){
       if(e.d.slice(0, 7) !== mv) return;
       var counted = false;
       (e.blocks || []).forEach(function(b){
+        var site = (b.site || "").trim() || "(현장 미기재)";
+        if(!sites[site]) sites[site] = {g: 0, d: {}, c: {}};
+        var any = false;
         (b.crew || "").split(",").forEach(function(tk){
           tk = tk.trim(); if(!tk) return;
           var name = tk.replace(/\s+[0-9]*\.?[0-9]+\s*$/, "").trim();
           if(!name) return;
-          if(!rows[name]) rows[name] = {g: 0, d: {}};
-          rows[name].g += gongsuOf(tk);
-          rows[name].d[e.d] = 1;
-          counted = true;
+          var g = gongsuOf(tk);
+          if(!sites[site].c[name]) sites[site].c[name] = {g: 0, d: {}};
+          sites[site].c[name].g += g;
+          sites[site].c[name].d[e.d] = 1;
+          sites[site].g += g;
+          if(!crews[name]) crews[name] = {g: 0, d: {}};
+          crews[name].g += g;
+          crews[name].d[e.d] = 1;
+          any = true; counted = true;
         });
+        if(any) sites[site].d[e.d] = 1;
       });
       if(counted) allDays[e.d] = 1;
     });
-    return {rows: rows, days: Object.keys(allDays).length};
+    return {sites: sites, crews: crews, days: Object.keys(allDays).length};
   }
   function r1(x){ return Math.round(x*10)/10; }
+  function dcnt(o){ return Object.keys(o.d).length; }
+  function sortByG(obj){
+    return Object.keys(obj).sort(function(a,b){ return obj[b].g - obj[a].g; });
+  }
   function buildMonth(){
     var mv = $("r_mon").value;
     if(!mv) return "";
     var agg = monthAgg();
-    var names = Object.keys(agg.rows);
-    if(!names.length) return "";
-    names.sort(function(a,b){ return agg.rows[b].g - agg.rows[a].g; });
+    var siteKeys = sortByG(agg.sites);
+    if(!siteKeys.length) return "";
     var p = mv.split("-");
-    var s = "[" + (+p[0]) + "년 " + (+p[1]) + "월 결산]";
     var rate = parseFloat($("r_monRate").value);
+    var s = "[" + (+p[0]) + "년 " + (+p[1]) + "월 결산]";
+    siteKeys.forEach(function(st){
+      var so = agg.sites[st];
+      s += "\n\n" + st + "  (" + dcnt(so) + "일)";
+      sortByG(so.c).forEach(function(nm){
+        s += "\n  " + nm + " — 공수 " + r1(so.c[nm].g);
+      });
+      s += "\n  소계 " + r1(so.g);
+    });
+    var crewKeys = sortByG(agg.crews);
     var tot = 0;
-    names.forEach(function(nm){
-      var r = agg.rows[nm], dcnt = Object.keys(r.d).length;
-      tot += r.g;
-      var line = "\n" + nm + " — " + dcnt + "일 / 공수 " + r1(r.g);
-      if(rate > 0) line += " / " + Math.round(r.g * rate).toLocaleString("ko-KR") + "원";
+    s += "\n\n· 이번 달 업체별 합계";
+    crewKeys.forEach(function(nm){
+      var c = agg.crews[nm];
+      tot += c.g;
+      var line = "\n" + nm + " — " + dcnt(c) + "일 / 공수 " + r1(c.g);
+      if(rate > 0) line += " / " + Math.round(c.g * rate).toLocaleString("ko-KR") + "원";
       s += line;
     });
     s += "\n\n작업일수 " + agg.days + "일 · 총 공수 " + r1(tot);
@@ -1451,17 +1473,28 @@
   function renderMonth(){
     var el = $("r_monList");
     var agg = monthAgg();
-    var names = Object.keys(agg.rows);
-    if(!names.length){ el.innerHTML = '<p class="hint">이 달에 저장된 일보가 없어요</p>'; return; }
-    names.sort(function(a,b){ return agg.rows[b].g - agg.rows[a].g; });
+    var siteKeys = sortByG(agg.sites);
+    if(!siteKeys.length){ el.innerHTML = '<p class="hint">이 달에 저장된 일보가 없어요</p>'; return; }
     var rate = parseFloat($("r_monRate").value);
-    var tot = 0, h = "";
-    names.forEach(function(nm){
-      var r = agg.rows[nm], dcnt = Object.keys(r.d).length;
-      tot += r.g;
+    var h = "";
+    siteKeys.forEach(function(st){
+      var so = agg.sites[st];
+      h += '<div style="margin-top:10px; display:flex; justify-content:space-between; gap:8px; font-size:13.5px; font-weight:800; color:var(--acc); border-bottom:1px solid var(--acc); padding-bottom:5px;">'
+        + '<span>' + st.replace(/</g,"&lt;") + '</span><span>' + dcnt(so) + '일 · 공수 ' + r1(so.g) + '</span></div>';
+      sortByG(so.c).forEach(function(nm){
+        h += '<div style="display:flex; justify-content:space-between; gap:8px; padding:6px 0 6px 10px; border-bottom:1px solid var(--line); font-size:13px;">'
+          + '<span>' + nm.replace(/</g,"&lt;") + '</span><span style="color:var(--sub);">공수 <b style="color:var(--txt);">' + r1(so.c[nm].g) + '</b></span></div>';
+      });
+    });
+    var crewKeys = sortByG(agg.crews);
+    var tot = 0;
+    h += '<div style="margin-top:14px; font-size:12px; color:var(--acc); letter-spacing:1px; font-weight:700;">이번 달 업체별 합계</div>';
+    crewKeys.forEach(function(nm){
+      var c = agg.crews[nm];
+      tot += c.g;
       h += '<div style="display:flex; justify-content:space-between; gap:8px; padding:7px 0; border-bottom:1px solid var(--line); font-size:13.5px;">'
-         + '<span>' + nm + '</span><span style="color:var(--sub);">' + dcnt + '일 · 공수 <b style="color:var(--acc);">' + r1(r.g) + '</b>'
-         + (rate > 0 ? ' · ' + Math.round(r.g*rate).toLocaleString("ko-KR") + '원' : '') + '</span></div>';
+        + '<span>' + nm.replace(/</g,"&lt;") + '</span><span style="color:var(--sub);">' + dcnt(c) + '일 · 공수 <b style="color:var(--acc);">' + r1(c.g) + '</b>'
+        + (rate > 0 ? ' · ' + Math.round(c.g*rate).toLocaleString("ko-KR") + '원' : '') + '</span></div>';
     });
     h += '<div style="padding:9px 0 0; font-size:13.5px; font-weight:800;">작업일수 ' + agg.days + '일 · 총 공수 <span style="color:var(--acc);">' + r1(tot) + '</span>'
        + (rate > 0 ? ' · 총액 ' + Math.round(tot*rate).toLocaleString("ko-KR") + '원' : '') + '</div>';
