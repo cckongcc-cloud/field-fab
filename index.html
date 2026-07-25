@@ -196,7 +196,7 @@
   <div class="tag">제작시안</div>
   <div class="tt">
     <h1>현장 도구</h1>
-    <p>그레이팅 · 엣지 · 일보 · 영수증 · 추가공정 <span style="color:var(--acc); font-weight:700;">v30</span></p>
+    <p>그레이팅 · 엣지 · 일보 · 영수증 · 추가공정 <span style="color:var(--acc); font-weight:700;">v31</span></p>
   </div>
 </header>
 
@@ -1431,9 +1431,12 @@
           sites[site].c[name].g += g;
           sites[site].c[name].d[e.d] = 1;
           sites[site].g += g;
-          if(!crews[name]) crews[name] = {g: 0, d: {}};
+          if(!crews[name]) crews[name] = {g: 0, d: {}, s: {}};
           crews[name].g += g;
           crews[name].d[e.d] = 1;
+          if(!crews[name].s[site]) crews[name].s[site] = {g: 0, d: {}};
+          crews[name].s[site].g += g;
+          crews[name].s[site].d[e.d] = 1;
           any = true; counted = true;
         });
         if(any) sites[site].d[e.d] = 1;
@@ -1473,6 +1476,9 @@
       var line = "\n" + nm + " — " + dcnt(c) + "일 / 공수 " + r1(c.g);
       if(rate > 0) line += " / " + Math.round(c.g * rate).toLocaleString("ko-KR") + "원";
       s += line;
+      sortByG(c.s).forEach(function(st){
+        s += "\n   " + st + " " + r1(c.s[st].g);
+      });
     });
     s += "\n\n작업일수 " + agg.days + "일 · 총 공수 " + r1(tot);
     if(rate > 0) s += "\n총액 " + Math.round(tot * rate).toLocaleString("ko-KR") + "원";
@@ -1500,9 +1506,13 @@
     crewKeys.forEach(function(nm){
       var c = agg.crews[nm];
       tot += c.g;
-      h += '<div style="display:flex; justify-content:space-between; gap:8px; padding:7px 0; border-bottom:1px solid var(--line); font-size:13.5px;">'
+      h += '<div style="display:flex; justify-content:space-between; gap:8px; padding:7px 0 3px; border-bottom:1px solid var(--line); font-size:13.5px; font-weight:700;">'
         + '<span>' + nm.replace(/</g,"&lt;") + '</span><span style="color:var(--sub);">' + dcnt(c) + '일 · 공수 <b style="color:var(--acc);">' + r1(c.g) + '</b>'
         + (rate > 0 ? ' · ' + Math.round(c.g*rate).toLocaleString("ko-KR") + '원' : '') + '</span></div>';
+      sortByG(c.s).forEach(function(st){
+        h += '<div style="display:flex; justify-content:space-between; gap:8px; padding:3px 0 3px 12px; font-size:12px; color:var(--sub);">'
+          + '<span>' + st.replace(/</g,"&lt;") + '</span><span>공수 ' + r1(c.s[st].g) + '</span></div>';
+      });
     });
     h += '<div style="padding:9px 0 0; font-size:13.5px; font-weight:800;">작업일수 ' + agg.days + '일 · 총 공수 <span style="color:var(--acc);">' + r1(tot) + '</span>'
        + (rate > 0 ? ' · 총액 ' + Math.round(tot*rate).toLocaleString("ko-KR") + '원' : '') + '</div>';
