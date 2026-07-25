@@ -196,7 +196,7 @@
   <div class="tag">제작시안</div>
   <div class="tt">
     <h1>현장 도구</h1>
-    <p>그레이팅 · 엣지 · 일보 · 영수증 · 추가공정 <span style="color:var(--acc); font-weight:700;">v28</span></p>
+    <p>그레이팅 · 엣지 · 일보 · 영수증 · 추가공정 <span style="color:var(--acc); font-weight:700;">v30</span></p>
   </div>
 </header>
 
@@ -417,6 +417,14 @@
     </div>
     <div id="r_qlist"><p class="hint">복사·공유한 일보가 자동으로 여기 쌓여요. 기록은 이 폰에만 저장되니 폰을 바꾸기 전엔 아래 내보내기로 백업해 두세요.</p></div>
     <button id="r_export" type="button">전체 기록 내보내기 (백업)</button>
+    <div style="border-top:1px dashed var(--line); margin-top:12px; padding-top:12px;">
+      <div class="fld"><label>지난 일보 가져오기 — 카톡에서 복사해 붙여넣기</label>
+        <textarea id="r_imp" rows="5" style="width:100%; background:#15171A; border:1px solid var(--line); border-radius:8px; color:var(--txt); font-size:14px; padding:9px 10px; font-family:inherit; line-height:1.6;" placeholder="예)&#10;7월 3일(금) 김포 운양동1256-1&#10;-작업인원: 공철민,에스타일 5명&#10;-작업내용: 타일 작업&#10;&#10;여러 날을 한 번에 붙여넣어도 돼요 (빈 줄로 구분)"></textarea>
+      </div>
+      <div class="fld"><label>연도 (제목에 연도가 없을 때 적용)</label><input id="r_impYear" type="number" inputmode="numeric" placeholder="예) 2026"></div>
+      <div id="r_impPrev" class="hint" style="margin:2px 0 8px;"></div>
+      <button id="r_impBtn" type="button" style="width:100%; background:#2A2E33; border:1px solid var(--acc); color:var(--acc); border-radius:10px; padding:12px 6px; font-size:14px; font-weight:800;">미리보기 확인 후 가져오기</button>
+    </div>
   </div>
   <div class="card">
     <h2>월 결산 (업체별 전체)</h2>
@@ -1514,6 +1522,81 @@
     if(!t){ toastR("이 달에 저장된 일보가 없어요"); return; }
     if(navigator.share){ navigator.share({text: t}).catch(function(){}); }
     else toastR("공유 미지원 — 복사를 이용하세요");
+  });
+
+  /* ── 지난 일보 가져오기 (카톡 텍스트 파싱) ── */
+  var MON_DAY = /(\d{4})?\s*(\d{1,2})\s*월\s*(\d{1,2})\s*일/;
+  function parseImport(text){
+    var yFallback = parseInt($("r_impYear").value, 10) || (new Date()).getFullYear();
+    var chunks = text.split(/\n\s*\n/); // 빈 줄로 일자 구분
+    var out = [];
+    chunks.forEach(function(ch){
+      var lines = ch.split(/\n/).map(function(x){ return x.trim(); }).filter(Boolean);
+      if(!lines.length) return;
+      // 날짜 줄 찾기
+      var di = -1, m = null;
+      for(var i = 0; i < lines.length; i++){
+        var mm = lines[i].match(MON_DAY);
+        if(mm){ di = i; m = mm; break; }
+      }
+      if(di < 0) return;
+      if(/내일일정/.test(lines[di])) return; // 내일일정 블록은 제외
+      var y = m[1] ? parseInt(m[1], 10) : yFallback;
+      var mo = ("0" + parseInt(m[2],10)).slice(-2), da = ("0" + parseInt(m[3],10)).slice(-2);
+      var dISO = y + "-" + mo + "-" + da;
+      // 날짜 줄에서 날짜 표기 뒤 = 현장
+      var after = lines[di].replace(MON_DAY, "").replace(/^\s*\([일월화수목금토]\)\s*/, "").replace(/\([일월화수목금토]\)/, "").trim();
+      var blocks = [];
+      var cur = after ? {site: after, crew: "", work: "", equip: "", mat: ""} : null;
+      for(var j = di+1; j < lines.length; j++){
+        var ln = lines[j];
+        var mCrew = ln.match(/^[-·]?\s*작업\s*인원\s*[:：]\s*(.*)$/);
+        var mWork = ln.match(/^[-·]?\s*작업\s*내용\s*[:：]\s*(.*)$/);
+        var mEq   = ln.match(/^[-·]?\s*작업\s*장비\s*[:：]\s*(.*)$/);
+        var mMat  = ln.match(/^[-·]?\s*(?:농장)?\s*자재\s*[:：]\s*(.*)$/);
+        if(mCrew){ if(!cur) cur = {site:"", crew:"", work:"", equip:"", mat:""}; cur.crew = mCrew[1].trim(); }
+        else if(mWork){ if(cur) cur.work = mWork[1].trim(); }
+        else if(mEq){ if(cur) cur.equip = mEq[1].trim(); }
+        else if(mMat){ if(cur) cur.mat = mMat[1].trim(); }
+        else if(!/^[-·]/.test(ln)){
+          // 새 현장 줄 (다현장): "현장" 또는 "현장: 인원"
+          if(cur && (cur.site || cur.crew)) blocks.push(cur);
+          var cm = ln.match(/^(.*?)[:：]\s*(.*)$/);
+          if(cm){ cur = {site: cm[1].trim(), crew: cm[2].trim(), work:"", equip:"", mat:""}; }
+          else{ cur = {site: ln.trim(), crew:"", work:"", equip:"", mat:""}; }
+        }
+      }
+      if(cur) blocks.push(cur);
+      blocks = blocks.filter(function(b){ return b.site || b.crew; });
+      if(!blocks.length) return;
+      out.push({d: dISO, t: ch.trim(), blocks: blocks});
+    });
+    return out;
+  }
+  function refreshImpPrev(){
+    var parsed = parseImport($("r_imp").value);
+    var el = $("r_impPrev");
+    if(!$("r_imp").value.trim()){ el.textContent = ""; return; }
+    if(!parsed.length){ el.innerHTML = '<span style="color:var(--red);">인식된 일보가 없어요 — 날짜(○월 ○일)와 -작업인원: 형식을 확인하세요</span>'; return; }
+    el.innerHTML = '<b style="color:var(--acc);">' + parsed.length + '일치 인식됨</b> — ' +
+      parsed.slice(0,4).map(function(e){ return kshortLog(e.d); }).join(", ") + (parsed.length>4 ? " …" : "");
+  }
+  $("r_imp").addEventListener("input", refreshImpPrev);
+  $("r_impYear").addEventListener("input", refreshImpPrev);
+  $("r_impBtn").addEventListener("click", function(){
+    var parsed = parseImport($("r_imp").value);
+    if(!parsed.length){ toastR("인식된 일보가 없어요"); return; }
+    var log = loadLog();
+    parsed.forEach(function(en){
+      var i;
+      for(i = 0; i < log.length; i++){ if(log[i].d === en.d) break; }
+      if(i < log.length) log[i] = en; else log.push(en);
+    });
+    log.sort(function(a,b){ return a.d < b.d ? -1 : 1; });
+    try{ localStorage.setItem("rb_log", JSON.stringify(log)); }catch(e){}
+    $("r_imp").value = ""; refreshImpPrev();
+    renderLog(); renderMonth(); renderSummary();
+    toastR(parsed.length + "일치 가져왔어요");
   });
 
   /* ── 기간별 작업 요약 (날짜별 한 줄) ── */
