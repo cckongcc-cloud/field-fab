@@ -196,7 +196,7 @@
   <div class="tag">제작시안</div>
   <div class="tt">
     <h1>현장 도구</h1>
-    <p>그레이팅 · 엣지 · 일보 · 영수증 · 추가공정 <span style="color:var(--acc); font-weight:700;">v31</span></p>
+    <p>그레이팅 · 엣지 · 일보 · 영수증 · 추가공정 <span style="color:var(--acc); font-weight:700;">v32</span></p>
   </div>
 </header>
 
@@ -416,9 +416,13 @@
       </div>
     </div>
     <div id="r_qlist"><p class="hint">복사·공유한 일보가 자동으로 여기 쌓여요. 기록은 이 폰에만 저장되니 폰을 바꾸기 전엔 아래 내보내기로 백업해 두세요.</p></div>
-    <button id="r_export" type="button">전체 기록 내보내기 (백업)</button>
+    <button id="r_export" type="button">이번 달 일보 파일로 내보내기 (.md)</button>
     <div style="border-top:1px dashed var(--line); margin-top:12px; padding-top:12px;">
-      <div class="fld"><label>지난 일보 가져오기 — 카톡에서 복사해 붙여넣기</label>
+      <label id="r_impFileBtn" style="display:block; text-align:center; cursor:pointer; background:#2A2E33; border:1px solid var(--acc); color:var(--acc); border-radius:10px; padding:12px 6px; font-size:14px; font-weight:800; margin-bottom:8px;">📄 월간 일보 파일(.md/.txt) 불러오기
+        <input type="file" id="r_impFile" accept=".md,.txt,text/plain,text/markdown"
+          style="position:absolute; width:1px; height:1px; opacity:0; overflow:hidden; clip:rect(0 0 0 0);">
+      </label>
+      <div class="fld"><label>또는 카톡에서 복사해 붙여넣기</label>
         <textarea id="r_imp" rows="5" style="width:100%; background:#15171A; border:1px solid var(--line); border-radius:8px; color:var(--txt); font-size:14px; padding:9px 10px; font-family:inherit; line-height:1.6;" placeholder="예)&#10;7월 3일(금) 김포 운양동1256-1&#10;-작업인원: 공철민,에스타일 5명&#10;-작업내용: 타일 작업&#10;&#10;여러 날을 한 번에 붙여넣어도 돼요 (빈 줄로 구분)"></textarea>
       </div>
       <div class="fld"><label>연도 (제목에 연도가 없을 때 적용)</label><input id="r_impYear" type="number" inputmode="numeric" placeholder="예) 2026"></div>
@@ -1537,20 +1541,29 @@
   /* ── 지난 일보 가져오기 (카톡 텍스트 파싱) ── */
   var MON_DAY = /(\d{4})?\s*(\d{1,2})\s*월\s*(\d{1,2})\s*일/;
   function parseImport(text){
-    var yFallback = parseInt($("r_impYear").value, 10) || (new Date()).getFullYear();
-    var chunks = text.split(/\n\s*\n/); // 빈 줄로 일자 구분
+    var ym = text.match(/(\d{4})\s*년\s*\d{1,2}\s*월/);
+    var yFallback = parseInt($("r_impYear").value, 10) || (ym ? parseInt(ym[1],10) : (new Date()).getFullYear());
+    var chunks;
+    if(/\n###\s/.test(text)){
+      chunks = text.split(/\n###\s/).slice(1); // md 파일: ### 헤더 기준
+    }else{
+      chunks = text.split(/\n\s*\n/); // 카톡 붙여넣기: 빈 줄 기준
+    }
     var out = [];
     chunks.forEach(function(ch){
       var lines = ch.split(/\n/).map(function(x){ return x.trim(); }).filter(Boolean);
       if(!lines.length) return;
       // 날짜 줄 찾기
+      // 내일일정 이후는 잘라냄
+      var niIdx = -1;
+      for(var k = 0; k < lines.length; k++){ if(/내일일정/.test(lines[k])){ niIdx = k; break; } }
+      if(niIdx >= 0) lines = lines.slice(0, niIdx);
       var di = -1, m = null;
       for(var i = 0; i < lines.length; i++){
-        var mm = lines[i].match(MON_DAY);
-        if(mm){ di = i; m = mm; break; }
+        var mm = lines[i].match(/(\d{1,2})\s*월\s*(\d{1,2})\s*일/);
+        if(mm){ di = i; m = lines[i].match(MON_DAY); break; }
       }
       if(di < 0) return;
-      if(/내일일정/.test(lines[di])) return; // 내일일정 블록은 제외
       var y = m[1] ? parseInt(m[1], 10) : yFallback;
       var mo = ("0" + parseInt(m[2],10)).slice(-2), da = ("0" + parseInt(m[3],10)).slice(-2);
       var dISO = y + "-" + mo + "-" + da;
@@ -1568,6 +1581,7 @@
         else if(mWork){ if(cur) cur.work = mWork[1].trim(); }
         else if(mEq){ if(cur) cur.equip = mEq[1].trim(); }
         else if(mMat){ if(cur) cur.mat = mMat[1].trim(); }
+        else if(/^[-·]?\s*휴무\s*[:：]/.test(ln)){ /* 휴무는 무시 */ }
         else if(!/^[-·]/.test(ln)){
           // 새 현장 줄 (다현장): "현장" 또는 "현장: 인원"
           if(cur && (cur.site || cur.crew)) blocks.push(cur);
@@ -1702,21 +1716,50 @@
     if(navigator.share){ navigator.share({text: t}).catch(function(){}); }
     else toastR("공유 미지원 — 복사를 이용하세요");
   });
+  function exportMd(monthFilter){
+    var log = loadLog().filter(function(e){ return !monthFilter || e.d.slice(0,7) === monthFilter; });
+    if(!log.length) return null;
+    log.sort(function(a,b){ return a.d < b.d ? -1 : 1; });
+    var ym = (monthFilter || log[0].d.slice(0,7)).split("-");
+    var head = "# " + (+ym[0]) + "년 " + (+ym[1]) + "월 작업일보\n\n총 " + log.length + "건\n";
+    var body = log.map(function(e){
+      var da = (+e.d.split("-")[2]);
+      return "\n---\n\n### " + da + "일\n\n" + e.t;
+    }).join("\n");
+    return {text: head + body, name: (+ym[0]) + "년" + (+ym[1]) + "월_작업일보.md"};
+  }
   $("r_export").addEventListener("click", function(){
-    var log = loadLog();
-    if(!log.length){ toastR("내보낼 기록이 없어요"); return; }
-    var txt = log.map(function(e){ return e.t; }).join("\n\n──────────────\n\n");
-    var blob = new Blob([txt], {type: "text/plain"});
-    var name = "현장일보_백업_" + iso(new Date()).replace(/-/g, "") + ".txt";
-    var f = new File([blob], name, {type: "text/plain"});
+    var mv = $("r_mon").value; // 월 결산에서 고른 달 기준
+    var res = exportMd(mv) || exportMd(null);
+    if(!res){ toastR("내보낼 기록이 없어요"); return; }
+    var blob = new Blob([res.text], {type: "text/markdown"});
+    var f = new File([blob], res.name, {type: "text/markdown"});
     if(navigator.canShare && navigator.canShare({files: [f]})){
       navigator.share({files: [f]}).catch(function(){});
     }else{
       var a = document.createElement("a");
-      a.href = URL.createObjectURL(blob); a.download = name;
+      a.href = URL.createObjectURL(blob); a.download = res.name;
       document.body.appendChild(a); a.click(); a.remove();
       toastR("저장됨 — 다운로드 폴더 확인");
     }
+  });
+
+  /* 파일 불러오기 */
+  $("r_impFile").addEventListener("change", function(){
+    var f = this.files && this.files[0];
+    this.value = "";
+    if(!f) return;
+    var rd = new FileReader();
+    rd.onload = function(){
+      var text = String(rd.result || "");
+      var ym = text.match(/(\d{4})\s*년\s*(\d{1,2})\s*월/);
+      if(ym && !$("r_impYear").value) $("r_impYear").value = ym[1];
+      $("r_imp").value = text;
+      refreshImpPrev();
+      toastR("파일 읽음 — 미리보기 확인 후 가져오기를 누르세요");
+    };
+    rd.onerror = function(){ toastR("파일을 읽지 못했어요"); };
+    rd.readAsText(f, "utf-8");
   });
 
   /* ── 전체 삭제: 오탭 방지 2단계 ── */
