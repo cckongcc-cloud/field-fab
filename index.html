@@ -196,7 +196,7 @@
   <div class="tag">제작시안</div>
   <div class="tt">
     <h1>현장 도구</h1>
-    <p>그레이팅 · 엣지 · 일보 · 영수증 · 추가공정 <span style="color:var(--acc); font-weight:700;">v33</span></p>
+    <p>그레이팅 · 엣지 · 일보 · 영수증 · 추가공정 <span style="color:var(--acc); font-weight:700;">v34</span></p>
   </div>
 </header>
 
@@ -1415,6 +1415,10 @@
     var n = new Date();
     $("r_mon").value = n.getFullYear() + "-" + ("0"+(n.getMonth()+1)).slice(-2);
   })();
+  function normSite(s){
+    return (s || "").replace(/\s*\([^)]*\)\s*/g, " ")  /* (수정) 등 괄호 제거 */
+                    .replace(/\s+/g, " ").trim();
+  }
   function monthAgg(){
     var mv = $("r_mon").value;
     var sites = {}, crews = {}, allDays = {};
@@ -1423,7 +1427,7 @@
       if(e.d.slice(0, 7) !== mv) return;
       var counted = false;
       (e.blocks || []).forEach(function(b){
-        var site = (b.site || "").trim() || "(현장 미기재)";
+        var site = normSite(b.site) || "(현장 미기재)";
         if(!sites[site]) sites[site] = {g: 0, d: {}, c: {}};
         var any = false;
         (b.crew || "").split(",").forEach(function(tk){
