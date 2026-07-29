@@ -196,7 +196,7 @@
   <div class="tag">제작시안</div>
   <div class="tt">
     <h1>현장 도구</h1>
-    <p>그레이팅 · 엣지 · 일보 · 영수증 · 추가공정 <span style="color:var(--acc); font-weight:700;">v32</span></p>
+    <p>그레이팅 · 엣지 · 일보 · 영수증 · 추가공정 <span style="color:var(--acc); font-weight:700;">v33</span></p>
   </div>
 </header>
 
@@ -1428,9 +1428,12 @@
         var any = false;
         (b.crew || "").split(",").forEach(function(tk){
           tk = tk.trim(); if(!tk) return;
-          var name = tk.replace(/\s+[0-9]*\.?[0-9]+\s*$/, "").trim();
-          if(!name) return;
           var g = gongsuOf(tk);
+          var name = tk.replace(/\s*[0-9]*\.?[0-9]+\s*$/, "")   /* 끝 공수 제거 */
+                       .replace(/\s*[0-9]+\s*명\s*$/, "")        /* 끝 N명 제거 */
+                       .replace(/\s*[0-9]+\s*명/, "")             /* 중간 N명 제거 */
+                       .trim();
+          if(!name) return;
           if(!sites[site].c[name]) sites[site].c[name] = {g: 0, d: {}};
           sites[site].c[name].g += g;
           sites[site].c[name].d[e.d] = 1;
