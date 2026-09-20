@@ -188,6 +188,32 @@
   #x_total{background:#15171A; border:1px dashed var(--acc); border-radius:8px;
     padding:10px 12px; margin-top:8px; font-size:14px; line-height:1.8;}
   #x_total b{color:var(--acc);}
+  /* ── 접이식 섹션 ── */
+  details.fold{background:var(--panel); border:1px solid var(--line); border-radius:12px; margin-bottom:12px; overflow:hidden;}
+  details.fold > summary{list-style:none; cursor:pointer; padding:14px 14px; font-size:13.5px; font-weight:800;
+    color:var(--txt); display:flex; align-items:center; justify-content:space-between;}
+  details.fold > summary::-webkit-details-marker{display:none;}
+  details.fold > summary::after{content:"▾"; color:var(--sub); font-size:14px; transition:transform .15s;}
+  details.fold[open] > summary::after{transform:rotate(180deg);}
+  details.fold > summary .sub{font-size:11px; color:var(--sub); font-weight:500; margin-left:8px;}
+  details.fold .foldbody{padding:0 14px 14px;}
+  /* ── 결제 ── */
+  .payrow{border:1px solid var(--line); border-radius:10px; padding:11px; margin-bottom:8px; background:#15171A;}
+  .payrow.done{opacity:.55;}
+  .payrow.due{border-color:var(--red);}
+  .payrow .ptop{display:flex; align-items:center; gap:8px; margin-bottom:8px;}
+  .payrow .ptop b{flex:1; font-size:14.5px;}
+  .payrow .ptop .pg{font-size:11.5px; color:var(--sub);}
+  .payrow .amt{width:100%; background:#101214; border:1px solid var(--line); border-radius:7px;
+    color:var(--txt); font-size:15px; padding:8px; font-weight:600; margin-bottom:8px;}
+  .payrow .flags{display:flex; gap:6px;}
+  .payrow .flags button{flex:1; border:1px solid var(--line); background:#1F2226; color:var(--sub);
+    border-radius:7px; padding:9px 4px; font-size:12.5px; font-weight:700;}
+  .payrow .flags button.on{background:var(--acc); border-color:var(--acc); color:#1A1A1A;}
+  .payrow .flags button.paid.on{background:#3BA55C; border-color:#3BA55C; color:#fff;}
+  #y_sum{background:#15171A; border:1px dashed var(--acc); border-radius:8px; padding:10px 12px;
+    margin:8px 0; font-size:13.5px; line-height:1.8;}
+  #y_sum b{color:var(--acc);}
 </style>
 </head>
 <body>
@@ -196,7 +222,7 @@
   <div class="tag">제작시안</div>
   <div class="tt">
     <h1>현장 도구</h1>
-    <p>그레이팅 · 엣지 · 일보 · 영수증 · 추가공정 <span style="color:var(--acc); font-weight:700;">v36</span></p>
+    <p>그레이팅 · 엣지 · 일보 · 영수증 · 추가공정 · 결제 <span style="color:var(--acc); font-weight:700;">v39</span></p>
   </div>
 </header>
 
@@ -206,6 +232,7 @@
   <button id="tabR" type="button">현장일보</button>
   <button id="tabP" type="button">영수증</button>
   <button id="tabX" type="button">추가공정</button>
+  <button id="tabY" type="button">결제</button>
 </nav>
 
 <div id="pageG">
@@ -402,8 +429,9 @@
     <h2>미리보기</h2>
     <pre id="r_out"></pre>
   </div>
-  <div class="card">
-    <h2>지난 일보 검색</h2>
+  <details class="fold"><summary>지난 일보 검색·불러오기<span class="sub">기록 찾기 · 카톡/파일 가져오기</span></summary>
+  <div class="foldbody">
+    <h2 style="font-size:12px; font-weight:700; color:var(--acc); letter-spacing:1px; margin:0 0 10px;">지난 일보 검색</h2>
     <div class="fld"><label>업체·현장·작업내용으로 검색</label><input id="r_q" type="text" placeholder="예) 에스타일"></div>
     <div id="r_qsum"></div>
     <div id="r_settle" style="display:none;">
@@ -433,8 +461,10 @@
       <button id="r_impBtn" type="button" style="width:100%; background:#2A2E33; border:1px solid var(--acc); color:var(--acc); border-radius:10px; padding:12px 6px; font-size:14px; font-weight:800;">미리보기 확인 후 가져오기</button>
     </div>
   </div>
-  <div class="card">
-    <h2>월 결산 (업체별 전체)</h2>
+  </details>
+  <details class="fold"><summary>월 결산 · 달력 넣기<span class="sub">업체별 공수 · 달력 일괄 등록</span></summary>
+  <div class="foldbody">
+    <h2 style="font-size:12px; font-weight:700; color:var(--acc); letter-spacing:1px; margin:0 0 10px;">월 결산 (업체별 전체)</h2>
     <div class="grid">
       <div class="fld"><label>대상 월</label><input id="r_mon" type="month"></div>
       <div class="fld"><label>공수당 단가 (원·선택)</label><input id="r_monRate" type="number" inputmode="numeric" placeholder="예) 250000"></div>
@@ -444,9 +474,7 @@
       <button id="r_monCopy" type="button" style="flex:1; background:#2A2E33; border:1px solid var(--line); color:var(--txt); border-radius:8px; padding:12px 4px; font-size:13.5px; font-weight:800;">결산표 복사</button>
       <button id="r_monShare" type="button" style="flex:1; background:var(--acc); border:none; color:#1A1A1A; border-radius:8px; padding:12px 4px; font-size:13.5px; font-weight:800;">공유</button>
     </div>
-  </div>
-  <div class="card">
-    <h2>기간별 작업 요약 (날짜별)</h2>
+    <h2 style="font-size:12px; font-weight:700; color:var(--acc); letter-spacing:1px; margin:16px 0 10px;">기간별 작업 요약 (날짜별)</h2>
     <div class="grid">
       <div class="fld"><label>시작일</label><input id="r_sumFrom" type="date"></div>
       <div class="fld"><label>종료일</label><input id="r_sumTo" type="date"></div>
@@ -458,6 +486,7 @@
     </div>
     <p class="hint">날짜별 현장·작업내용 한 줄 요약이에요. 복사해서 네이버 캘린더·메모 등에 붙여넣으세요.</p>
   </div>
+  </details>
 </main>
 <div class="bar">
   <button id="r_btnCal" type="button" style="background:#2A2E33; color:var(--txt); border:1px solid var(--line);">📅 달력</button>
@@ -539,6 +568,32 @@
   <button id="x_clear" type="button" style="background:#15171A; color:var(--red); border:1px solid var(--red);">비우기</button>
   <button id="x_copy" type="button" style="background:#2A2E33; color:var(--txt); border:1px solid var(--line);">견적 복사</button>
   <button id="x_share" type="button" style="background:var(--acc); color:#1A1A1A;">공유</button>
+</div>
+</div>
+
+<div id="pageY" style="display:none">
+<main>
+  <div class="card">
+    <h2>결제 대상 월</h2>
+    <div class="grid">
+      <div class="fld"><label>월</label><input id="y_mon" type="month"></div>
+      <div class="fld" style="display:flex; align-items:flex-end;">
+        <button id="y_onlyDue" type="button" style="width:100%; background:#15171A; border:1px solid var(--line); color:var(--sub); border-radius:8px; padding:11px 4px; font-size:13px; font-weight:700;">미결제만 보기</button>
+      </div>
+    </div>
+    <p class="hint">그 달 일보에 잡힌 업체가 자동으로 결제 목록에 떠요. 인력(개인 이름)은 제외하고, 팀·업체로 보이는 곳만 추립니다. 빠진 곳은 아래에서 직접 추가하세요.</p>
+    <div id="y_sum"></div>
+  </div>
+
+  <div class="card">
+    <h2>업체별 결제 체크</h2>
+    <div id="y_list"></div>
+    <div class="fld" style="margin-top:10px;"><label>업체 직접 추가</label><input id="y_addName" type="text" placeholder="업체명 입력 후 엔터"></div>
+  </div>
+</main>
+<div class="bar">
+  <button id="y_copy" type="button" style="background:#2A2E33; color:var(--txt); border:1px solid var(--line);">현황 복사</button>
+  <button id="y_share" type="button" style="background:var(--acc); color:#1A1A1A;">공유</button>
 </div>
 </div>
 
@@ -1859,15 +1914,23 @@
   }
   function sendFile(text, name, mime, okMsg){
     var blob = new Blob([text], {type: mime});
+    var url = URL.createObjectURL(blob);
+    // 1차: 다운로드 (가장 확실)
+    var done = false;
+    try{
+      var a = document.createElement("a");
+      a.href = url; a.download = name;
+      document.body.appendChild(a); a.click(); a.remove();
+      done = true;
+    }catch(e){}
+    // 2차: 공유 가능하면 공유도 시도
     var f = new File([blob], name, {type: mime});
     if(navigator.canShare && navigator.canShare({files: [f]})){
-      navigator.share({files: [f]}).then(function(){ toastR(okMsg); }).catch(function(){});
-    }else{
-      var a = document.createElement("a");
-      a.href = URL.createObjectURL(blob); a.download = name;
-      document.body.appendChild(a); a.click(); a.remove();
-      toastR(okMsg);
+      navigator.share({files: [f]}).catch(function(){});
+      done = true;
     }
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 8000);
+    toastR(done ? okMsg : "저장 실패 — 크롬 브라우저에서 열어 다시 시도하세요");
   }
   $("r_calMonth").addEventListener("click", function(){
     var mv = $("r_mon").value;
@@ -1880,18 +1943,7 @@
     var ics = buildICS();
     if(!ics){ toastR("현장을 입력하면 달력에 넣을 수 있어요"); return; }
     finalize();
-    var blob = new Blob([ics.text], {type: "text/calendar"});
-    var f = new File([blob], ics.name, {type: "text/calendar"});
-    if(navigator.canShare && navigator.canShare({files: [f]})){
-      navigator.share({files: [f], title: ics.title}).then(function(){
-        toastR("캘린더 앱을 선택하면 일정이 추가돼요");
-      }).catch(function(){});
-    }else{
-      var a = document.createElement("a");
-      a.href = URL.createObjectURL(blob); a.download = ics.name;
-      document.body.appendChild(a); a.click(); a.remove();
-      toastR("파일 저장됨 — 탭하면 캘린더에 추가돼요");
-    }
+    sendFile(ics.text, ics.name, "text/calendar", "저장됨 — 파일을 탭하면 캘린더에 추가돼요");
   });
 
   function finalize(){ learn(); savePlan(); saveReport(); saveLog(); renderChips(); renderLog(); renderMonth(); renderSummary(); }
@@ -2494,7 +2546,165 @@
 (function(){
   "use strict";
   function $(id){ return document.getElementById(id); }
-  var pages = {G:$("pageG"), E:$("pageE"), R:$("pageR"), P:$("pageP"), X:$("pageX")}, tabs = {G:$("tabG"), E:$("tabE"), R:$("tabR"), P:$("tabP"), X:$("tabX")};
+  function nf(n){ return Math.round(n).toLocaleString("ko-KR"); }
+  function toastY(m){
+    var t = document.getElementById("toast");
+    t.textContent = m; t.classList.add("show");
+    clearTimeout(t._tm); t._tm = setTimeout(function(){ t.classList.remove("show"); }, 2200);
+  }
+  var onlyDue = false;
+
+  (function(){ var n=new Date(); $("y_mon").value = n.getFullYear()+"-"+("0"+(n.getMonth()+1)).slice(-2); })();
+
+  function gongsuOf(token){
+    var head = 1;
+    var hm = token.match(/([0-9]+)\s*명/);
+    if(hm) head = parseInt(hm[1], 10) || 1;
+    var m = token.match(/\s([0-9]*\.?[0-9]+)\s*$/);
+    var rate = m ? parseFloat(m[1]) : 1;
+    return head * rate;
+  }
+  function loadLog(){ try{ return JSON.parse(localStorage.getItem("rb_log") || "[]"); }catch(e){ return []; } }
+
+  /* 그 달 일보에서 업체 후보 추출 — "N명"이 붙은 항목만(=팀/업체) */
+  function vendorsOfMonth(mv){
+    var out = {};
+    loadLog().forEach(function(e){
+      if(e.d.slice(0,7) !== mv) return;
+      (e.blocks || []).forEach(function(b){
+        (b.crew || "").split(",").forEach(function(tk){
+          tk = tk.trim(); if(!tk) return;
+          if(!/[0-9]+\s*명/.test(tk)) return; // 개인 이름 제외, 업체(N명)만
+          var name = tk.replace(/\s*[0-9]*\.?[0-9]+\s*$/, "").replace(/\s*[0-9]+\s*명/g, "").trim();
+          if(!name) return;
+          if(!out[name]) out[name] = 0;
+          out[name] += gongsuOf(tk);
+        });
+      });
+    });
+    return out;
+  }
+
+  /* 결제 상태 저장: {"2026-08": {"에스타일": {tax:bool, paid:bool, amt:num, manual:bool}}} */
+  function loadPay(){ try{ return JSON.parse(localStorage.getItem("yw_pay") || "{}"); }catch(e){ return {}; } }
+  function savePay(o){ try{ localStorage.setItem("yw_pay", JSON.stringify(o)); }catch(e){} }
+
+  function currentRows(){
+    var mv = $("y_mon").value;
+    var vend = vendorsOfMonth(mv);
+    var pay = loadPay(); var mp = pay[mv] || {};
+    // 수동 추가분 병합
+    Object.keys(mp).forEach(function(nm){ if(mp[nm].manual && !(nm in vend)) vend[nm] = 0; });
+    var names = Object.keys(vend).sort(function(a,b){ return vend[b] - vend[a]; });
+    return {mv: mv, vend: vend, names: names, mp: mp};
+  }
+
+  function render(){
+    var c = currentRows();
+    var el = $("y_list"); el.innerHTML = "";
+    if(!c.names.length){
+      el.innerHTML = '<p class="hint">이 달 일보에 업체(○명)가 없어요. 아래에서 직접 추가하거나, 현장일보를 먼저 채우세요.</p>';
+    }
+    var pay = loadPay(); if(!pay[c.mv]) pay[c.mv] = {};
+    var totAll = 0, totPaid = 0, dueCnt = 0;
+    c.names.forEach(function(nm){
+      var st = pay[c.mv][nm] || {tax:false, paid:false, amt:0, manual:false};
+      pay[c.mv][nm] = st;
+      var amt = +st.amt || 0;
+      totAll += amt; if(st.paid) totPaid += amt; else if(amt>0 || true) { if(!st.paid) dueCnt++; }
+      if(onlyDue && st.paid) return;
+      var row = document.createElement("div");
+      row.className = "payrow" + (st.paid ? " done" : (st.tax ? " due" : ""));
+      var gTxt = c.vend[nm] ? ("공수 " + (Math.round(c.vend[nm]*10)/10)) : "직접추가";
+      row.innerHTML = '<div class="ptop"><b>' + nm.replace(/</g,"&lt;") + '</b><span class="pg">' + gTxt + '</span></div>';
+      var amtI = document.createElement("input");
+      amtI.className = "amt"; amtI.type = "number"; amtI.inputMode = "numeric";
+      amtI.placeholder = "결제 금액 (원)"; amtI.value = st.amt || "";
+      amtI.addEventListener("input", function(){
+        var p = loadPay(); if(!p[c.mv]) p[c.mv]={}; if(!p[c.mv][nm]) p[c.mv][nm]={};
+        p[c.mv][nm].amt = parseFloat(amtI.value)||0; p[c.mv][nm].manual = st.manual; savePay(p); refreshSum();
+      });
+      row.appendChild(amtI);
+      var flags = document.createElement("div"); flags.className = "flags";
+      var bt = document.createElement("button"); bt.textContent = "세금계산서"; if(st.tax) bt.classList.add("on");
+      bt.addEventListener("click", function(){
+        var p = loadPay(); p[c.mv][nm].tax = !p[c.mv][nm].tax; savePay(p); render();
+      });
+      var bp = document.createElement("button"); bp.className = "paid"; bp.textContent = "결제완료"; if(st.paid) bp.classList.add("on");
+      bp.addEventListener("click", function(){
+        var p = loadPay(); p[c.mv][nm].paid = !p[c.mv][nm].paid; savePay(p); render();
+      });
+      flags.appendChild(bt); flags.appendChild(bp);
+      row.appendChild(flags);
+      el.appendChild(row);
+    });
+    savePay(pay);
+    refreshSum();
+  }
+  function refreshSum(){
+    var c = currentRows();
+    var pay = loadPay(); var mp = pay[c.mv] || {};
+    var total = 0, paid = 0, due = 0, dueAmt = 0;
+    c.names.forEach(function(nm){
+      var st = mp[nm] || {}; var amt = +st.amt || 0;
+      total += amt;
+      if(st.paid) paid += amt; else { due++; dueAmt += amt; }
+    });
+    $("y_sum").innerHTML = "이달 업체 <b>" + c.names.length + "곳</b> · 지급예정 <b>" + nf(total) + "원</b>"
+      + "<br>결제완료 " + nf(paid) + "원 · <span style='color:var(--red);'>미결제 " + due + "곳 " + nf(dueAmt) + "원</span>";
+  }
+  $("y_mon").addEventListener("input", render);
+  $("y_onlyDue").addEventListener("click", function(){
+    onlyDue = !onlyDue; this.classList.toggle("on", onlyDue);
+    this.style.background = onlyDue ? "var(--acc)" : "#15171A";
+    this.style.color = onlyDue ? "#1A1A1A" : "var(--sub)";
+    render();
+  });
+  $("y_addName").addEventListener("keydown", function(e){
+    if(e.key !== "Enter") return;
+    var v = this.value.trim(); if(!v) return;
+    var mv = $("y_mon").value;
+    var p = loadPay(); if(!p[mv]) p[mv] = {};
+    if(!p[mv][v]) p[mv][v] = {tax:false, paid:false, amt:0, manual:true};
+    else p[mv][v].manual = true;
+    savePay(p); this.value = ""; render();
+  });
+  function buildStatus(){
+    var c = currentRows();
+    var pay = loadPay(); var mp = pay[c.mv] || {};
+    if(!c.names.length) return "";
+    var ym = c.mv.split("-");
+    var s = "[" + (+ym[0]) + "년 " + (+ym[1]) + "월 업체 결제현황]";
+    var total = 0, paid = 0;
+    c.names.forEach(function(nm){
+      var st = mp[nm] || {}; var amt = +st.amt || 0; total += amt; if(st.paid) paid += amt;
+      var mark = st.paid ? "[완료]" : (st.tax ? "[계산서O·미결제]" : "[대기]");
+      s += "\n" + mark + " " + nm + (amt ? " " + nf(amt) + "원" : "");
+    });
+    s += "\n\n합계 " + nf(total) + "원 / 결제완료 " + nf(paid) + "원 / 미결제 " + nf(total-paid) + "원";
+    return s;
+  }
+  $("y_copy").addEventListener("click", function(){
+    var t = buildStatus(); if(!t){ toastY("결제 대상이 없어요"); return; }
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(t).then(function(){ toastY("현황 복사 완료"); }, function(){ toastY("복사 실패"); });
+    }else toastY("복사 미지원");
+  });
+  $("y_share").addEventListener("click", function(){
+    var t = buildStatus(); if(!t){ toastY("결제 대상이 없어요"); return; }
+    if(navigator.share){ navigator.share({text: t}).catch(function(){}); }
+    else toastY("공유 미지원");
+  });
+
+  window.__renderPay = render;
+  render();
+})();
+</script>
+<script>
+(function(){
+  "use strict";
+  function $(id){ return document.getElementById(id); }
+  var pages = {G:$("pageG"), E:$("pageE"), R:$("pageR"), P:$("pageP"), X:$("pageX"), Y:$("pageY")}, tabs = {G:$("tabG"), E:$("tabE"), R:$("tabR"), P:$("tabP"), X:$("tabX"), Y:$("tabY")};
   function show(k){
     Object.keys(pages).forEach(function(x){
       pages[x].style.display = (x===k) ? "" : "none";
@@ -2507,6 +2717,7 @@
   $("tabR").addEventListener("click", function(){ show("R"); });
   $("tabP").addEventListener("click", function(){ show("P"); });
   $("tabX").addEventListener("click", function(){ show("X"); });
+  $("tabY").addEventListener("click", function(){ show("Y"); if(window.__renderPay) window.__renderPay(); });
 
   /* 현장명·회사명 두 탭 동기화 */
   function link(a, b){
@@ -2526,7 +2737,7 @@
   persist(gS, "fab_site"); persist(gC, "fab_co");
 
   var t=null; try{ t = localStorage.getItem("fab_tab"); }catch(e){}
-  show(t === "E" || t === "R" || t === "P" || t === "X" ? t : "G");
+  show(t === "E" || t === "R" || t === "P" || t === "X" || t === "Y" ? t : "G");
 })();
 </script>
 </body>
