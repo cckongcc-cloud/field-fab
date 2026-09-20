@@ -196,7 +196,7 @@
   <div class="tag">제작시안</div>
   <div class="tt">
     <h1>현장 도구</h1>
-    <p>그레이팅 · 엣지 · 일보 · 영수증 · 추가공정 <span style="color:var(--acc); font-weight:700;">v34</span></p>
+    <p>그레이팅 · 엣지 · 일보 · 영수증 · 추가공정 <span style="color:var(--acc); font-weight:700;">v35</span></p>
   </div>
 </header>
 
@@ -457,7 +457,8 @@
   </div>
 </main>
 <div class="bar">
-  <button id="r_btnCopy" type="button">텍스트 복사</button>
+  <button id="r_btnCal" type="button" style="background:#2A2E33; color:var(--txt); border:1px solid var(--line);">📅 달력</button>
+  <button id="r_btnCopy" type="button">복사</button>
   <button id="r_btnShare" type="button">카톡·공유</button>
 </div>
 </div>
@@ -1791,6 +1792,59 @@
     }else{
       b.textContent = "한 번 더 탭하면 삭제";
       resetArm = setTimeout(function(){ resetArm = null; b.textContent = "전체 삭제"; }, 3000);
+    }
+  });
+
+  /* ── 캘린더(ICS) 내보내기 ── */
+  function icsEscape(s){ return String(s).replace(/\\/g,"\\\\").replace(/;/g,"\\;").replace(/,/g,"\\,").replace(/\n/g,"\\n"); }
+  function calTitle(){
+    if(rMode !== "full") return "";
+    var bs = siteBlocks();
+    var sites = bs.map(function(b){ return normSiteTitle(b.site); }).filter(Boolean);
+    if(!sites.length) return "작업일보";
+    var firstWork = "";
+    for(var i=0;i<bs.length;i++){ if(bs[i].work){ firstWork = bs[i].work.split(/[,·]/)[0].trim(); break; } }
+    var head = sites.length > 1 ? (sites[0] + " 외 " + (sites.length-1)) : sites[0];
+    return head + (firstWork ? " " + firstWork : "");
+  }
+  function normSiteTitle(s){ return (s||"").replace(/\s*\([^)]*\)\s*/g," ").replace(/\s+/g," ").trim(); }
+  function buildICS(){
+    var d = $("r_date").value;
+    if(!d) return null;
+    var title = calTitle();
+    if(!title) return null;
+    var body = build().split("\n\n내일일정")[0].trim();
+    var dt = d.replace(/-/g, "");
+    var now = new Date();
+    var stamp = now.getUTCFullYear() + ("0"+(now.getUTCMonth()+1)).slice(-2) + ("0"+now.getUTCDate()).slice(-2)
+      + "T" + ("0"+now.getUTCHours()).slice(-2) + ("0"+now.getUTCMinutes()).slice(-2) + ("0"+now.getUTCSeconds()).slice(-2) + "Z";
+    var uid = "fieldfab-" + dt + "-" + now.getTime() + "@field-fab";
+    var lines = [
+      "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//field-fab//KO",
+      "BEGIN:VEVENT", "UID:" + uid, "DTSTAMP:" + stamp,
+      "DTSTART;VALUE=DATE:" + dt,
+      "SUMMARY:" + icsEscape(title),
+      "DESCRIPTION:" + icsEscape(body),
+      "TRANSP:TRANSPARENT", "END:VEVENT", "END:VCALENDAR"
+    ];
+    return {text: lines.join("\r\n"), name: "일보_" + dt + ".ics", title: title};
+  }
+  $("r_btnCal").addEventListener("click", function(){
+    if(rMode !== "full"){ toastR("간단 공지는 달력에 넣지 않아요 — 전체 일보에서 사용하세요"); return; }
+    var ics = buildICS();
+    if(!ics){ toastR("현장을 입력하면 달력에 넣을 수 있어요"); return; }
+    finalize();
+    var blob = new Blob([ics.text], {type: "text/calendar"});
+    var f = new File([blob], ics.name, {type: "text/calendar"});
+    if(navigator.canShare && navigator.canShare({files: [f]})){
+      navigator.share({files: [f], title: ics.title}).then(function(){
+        toastR("캘린더 앱을 선택하면 일정이 추가돼요");
+      }).catch(function(){});
+    }else{
+      var a = document.createElement("a");
+      a.href = URL.createObjectURL(blob); a.download = ics.name;
+      document.body.appendChild(a); a.click(); a.remove();
+      toastR("파일 저장됨 — 탭하면 캘린더에 추가돼요");
     }
   });
 
