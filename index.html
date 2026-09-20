@@ -222,7 +222,7 @@
   <div class="tag">제작시안</div>
   <div class="tt">
     <h1>현장 도구</h1>
-    <p>그레이팅 · 엣지 · 일보 · 영수증 · 추가공정 · 결제 <span style="color:var(--acc); font-weight:700;">v39</span></p>
+    <p>그레이팅 · 엣지 · 일보 · 영수증 · 추가공정 · 결제 <span style="color:var(--acc); font-weight:700;">v41</span></p>
   </div>
 </header>
 
@@ -574,14 +574,19 @@
 <div id="pageY" style="display:none">
 <main>
   <div class="card">
-    <h2>결제 대상 월</h2>
-    <div class="grid">
-      <div class="fld"><label>월</label><input id="y_mon" type="month"></div>
-      <div class="fld" style="display:flex; align-items:flex-end;">
-        <button id="y_onlyDue" type="button" style="width:100%; background:#15171A; border:1px solid var(--line); color:var(--sub); border-radius:8px; padding:11px 4px; font-size:13px; font-weight:700;">미결제만 보기</button>
-      </div>
+    <div class="seg" style="margin-bottom:10px;">
+      <button id="y_mSite" type="button" class="on">현장별 정산</button>
+      <button id="y_mMon" type="button">월별 보기</button>
     </div>
-    <p class="hint">그 달 일보에 잡힌 업체가 자동으로 결제 목록에 떠요. 인력(개인 이름)은 제외하고, 팀·업체로 보이는 곳만 추립니다. 빠진 곳은 아래에서 직접 추가하세요.</p>
+    <div class="fld" id="y_siteWrap">
+      <label>현장 선택 (기간 상관없이 그 현장 전체)</label>
+      <select id="y_siteSel" style="width:100%; background:#101214; border:1px solid var(--line); border-radius:8px; color:var(--txt); font-size:15px; padding:10px; font-weight:600;"></select>
+    </div>
+    <div class="fld" id="y_monWrap" style="display:none;">
+      <label>대상 월</label><input id="y_mon" type="month" style="width:100%; background:#101214; border:1px solid var(--line); border-radius:8px; color:var(--txt); font-size:15px; padding:9px 10px; font-weight:600;">
+    </div>
+    <button id="y_onlyDue" type="button" style="width:100%; margin-top:8px; background:#15171A; border:1px solid var(--line); color:var(--sub); border-radius:8px; padding:11px 4px; font-size:13px; font-weight:700;">미결제만 보기</button>
+    <p class="hint">현장별: 한 현장에 들어온 업체를 기간(달 넘어가도) 상관없이 합산해요. 인력(개인 이름)은 빼고 업체(○명)만 잡습니다. 빠진 곳은 아래에서 직접 추가하세요.</p>
     <div id="y_sum"></div>
   </div>
 
@@ -1891,12 +1896,16 @@
       "TRANSP:TRANSPARENT", "END:VEVENT"
     ].join("\r\n");
   }
+  function offLineFromFull(full){
+    return /\n휴무:\s*\S/.test(full) ? "\n휴무" : "";
+  }
   function buildICS(){
     var d = $("r_date").value;
     if(!d) return null;
     var title = calTitle();
     if(!title) return null;
-    var body = build().split("\n\n내일일정")[0].trim();
+    var full = build();
+    var body = full.split("\n\n내일일정")[0].trim() + offLineFromFull(full);
     var text = ["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//field-fab//KO",
       vevent(d, title, body, Date.now()), "END:VCALENDAR"].join("\r\n");
     return {text: text, name: "일보_" + d.replace(/-/g,"") + ".ics", title: title};
@@ -1906,7 +1915,9 @@
     if(!log.length) return null;
     log.sort(function(a,b){ return a.d < b.d ? -1 : 1; });
     var evs = log.map(function(e, i){
-      return vevent(e.d, titleFromEntry(e), (e.t || "").split("\n\n내일일정")[0].trim(), Date.now() + "-" + i);
+      var ft = (e.t || "");
+      var bd = ft.split("\n\n내일일정")[0].trim() + offLineFromFull(ft);
+      return vevent(e.d, titleFromEntry(e), bd, Date.now() + "-" + i);
     });
     var text = ["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//field-fab//KO"].concat(evs).concat(["END:VCALENDAR"]).join("\r\n");
     var ym = (monthFilter || "all").replace("-", "");
@@ -2547,12 +2558,14 @@
   "use strict";
   function $(id){ return document.getElementById(id); }
   function nf(n){ return Math.round(n).toLocaleString("ko-KR"); }
+  function r1(x){ return Math.round(x*10)/10; }
   function toastY(m){
     var t = document.getElementById("toast");
     t.textContent = m; t.classList.add("show");
     clearTimeout(t._tm); t._tm = setTimeout(function(){ t.classList.remove("show"); }, 2200);
   }
   var onlyDue = false;
+  var mode = "site"; // site | month
 
   (function(){ var n=new Date(); $("y_mon").value = n.getFullYear()+"-"+("0"+(n.getMonth()+1)).slice(-2); })();
 
@@ -2565,75 +2578,93 @@
     return head * rate;
   }
   function loadLog(){ try{ return JSON.parse(localStorage.getItem("rb_log") || "[]"); }catch(e){ return []; } }
+  function normSite(s){ return (s||"").replace(/\s*\([^)]*\)\s*/g," ").replace(/\s+/g," ").trim(); }
+  function isVendor(tk){ return /[0-9]+\s*명/.test(tk); }
+  function vendorName(tk){ return tk.replace(/\s*[0-9]*\.?[0-9]+\s*$/, "").replace(/\s*[0-9]+\s*명/g, "").trim(); }
 
-  /* 그 달 일보에서 업체 후보 추출 — "N명"이 붙은 항목만(=팀/업체) */
-  function vendorsOfMonth(mv){
-    var out = {};
+  /* 현장 목록 (업체가 하나라도 들어온 현장) */
+  function siteList(){
+    var set = {};
     loadLog().forEach(function(e){
-      if(e.d.slice(0,7) !== mv) return;
       (e.blocks || []).forEach(function(b){
+        var hasVendor = (b.crew||"").split(",").some(function(t){ return isVendor(t.trim()); });
+        var st = normSite(b.site);
+        if(st && hasVendor){ if(!set[st]) set[st] = 0; set[st] = Math.max(set[st], e.d); }
+      });
+    });
+    return Object.keys(set).sort(function(a,b){ return set[b] < set[a] ? -1 : 1; }); // 최근 현장 먼저
+  }
+  function fillSiteSelect(){
+    var sel = $("y_siteSel"); var prev = sel.value;
+    var list = siteList();
+    sel.innerHTML = "";
+    if(!list.length){ var o=document.createElement("option"); o.textContent="(업체가 들어온 현장 없음)"; o.value=""; sel.appendChild(o); return; }
+    list.forEach(function(st){ var o=document.createElement("option"); o.value=st; o.textContent=st; sel.appendChild(o); });
+    if(prev && list.indexOf(prev)>=0) sel.value = prev;
+  }
+
+  /* 업체 공수 집계 — 현장별 또는 월별 */
+  function vendorsFor(){
+    var out = {};
+    var key = mode === "site" ? $("y_siteSel").value : $("y_mon").value;
+    loadLog().forEach(function(e){
+      (e.blocks || []).forEach(function(b){
+        if(mode === "site"){ if(normSite(b.site) !== key) return; }
+        else { if(e.d.slice(0,7) !== key) return; }
         (b.crew || "").split(",").forEach(function(tk){
-          tk = tk.trim(); if(!tk) return;
-          if(!/[0-9]+\s*명/.test(tk)) return; // 개인 이름 제외, 업체(N명)만
-          var name = tk.replace(/\s*[0-9]*\.?[0-9]+\s*$/, "").replace(/\s*[0-9]+\s*명/g, "").trim();
-          if(!name) return;
+          tk = tk.trim(); if(!tk || !isVendor(tk)) return;
+          var name = vendorName(tk); if(!name) return;
           if(!out[name]) out[name] = 0;
           out[name] += gongsuOf(tk);
         });
       });
     });
-    return out;
+    return {key: key, vend: out};
   }
+  /* 저장키: 현장별은 "site:현장명", 월별은 "2026-08" */
+  function payKey(){ return mode === "site" ? ("site:" + $("y_siteSel").value) : $("y_mon").value; }
 
-  /* 결제 상태 저장: {"2026-08": {"에스타일": {tax:bool, paid:bool, amt:num, manual:bool}}} */
   function loadPay(){ try{ return JSON.parse(localStorage.getItem("yw_pay") || "{}"); }catch(e){ return {}; } }
   function savePay(o){ try{ localStorage.setItem("yw_pay", JSON.stringify(o)); }catch(e){} }
 
   function currentRows(){
-    var mv = $("y_mon").value;
-    var vend = vendorsOfMonth(mv);
-    var pay = loadPay(); var mp = pay[mv] || {};
-    // 수동 추가분 병합
-    Object.keys(mp).forEach(function(nm){ if(mp[nm].manual && !(nm in vend)) vend[nm] = 0; });
-    var names = Object.keys(vend).sort(function(a,b){ return vend[b] - vend[a]; });
-    return {mv: mv, vend: vend, names: names, mp: mp};
+    var v = vendorsFor();
+    var pk = payKey();
+    var pay = loadPay(); var mp = pay[pk] || {};
+    Object.keys(mp).forEach(function(nm){ if(mp[nm].manual && !(nm in v.vend)) v.vend[nm] = 0; });
+    var names = Object.keys(v.vend).sort(function(a,b){ return v.vend[b] - v.vend[a]; });
+    return {key: v.key, pk: pk, vend: v.vend, names: names, mp: mp};
   }
 
   function render(){
+    if(mode === "site") fillSiteSelect();
     var c = currentRows();
     var el = $("y_list"); el.innerHTML = "";
     if(!c.names.length){
-      el.innerHTML = '<p class="hint">이 달 일보에 업체(○명)가 없어요. 아래에서 직접 추가하거나, 현장일보를 먼저 채우세요.</p>';
+      el.innerHTML = '<p class="hint">' + (mode==="site" ? "이 현장에 업체(○명)가 없어요." : "이 달 일보에 업체(○명)가 없어요.") + ' 아래에서 직접 추가할 수 있어요.</p>';
     }
-    var pay = loadPay(); if(!pay[c.mv]) pay[c.mv] = {};
-    var totAll = 0, totPaid = 0, dueCnt = 0;
+    var pay = loadPay(); if(!pay[c.pk]) pay[c.pk] = {};
     c.names.forEach(function(nm){
-      var st = pay[c.mv][nm] || {tax:false, paid:false, amt:0, manual:false};
-      pay[c.mv][nm] = st;
-      var amt = +st.amt || 0;
-      totAll += amt; if(st.paid) totPaid += amt; else if(amt>0 || true) { if(!st.paid) dueCnt++; }
+      var st = pay[c.pk][nm] || {tax:false, paid:false, amt:0, manual:false};
+      pay[c.pk][nm] = st;
       if(onlyDue && st.paid) return;
       var row = document.createElement("div");
       row.className = "payrow" + (st.paid ? " done" : (st.tax ? " due" : ""));
-      var gTxt = c.vend[nm] ? ("공수 " + (Math.round(c.vend[nm]*10)/10)) : "직접추가";
+      var gTxt = c.vend[nm] ? ("공수 " + r1(c.vend[nm])) : "직접추가";
       row.innerHTML = '<div class="ptop"><b>' + nm.replace(/</g,"&lt;") + '</b><span class="pg">' + gTxt + '</span></div>';
       var amtI = document.createElement("input");
       amtI.className = "amt"; amtI.type = "number"; amtI.inputMode = "numeric";
       amtI.placeholder = "결제 금액 (원)"; amtI.value = st.amt || "";
       amtI.addEventListener("input", function(){
-        var p = loadPay(); if(!p[c.mv]) p[c.mv]={}; if(!p[c.mv][nm]) p[c.mv][nm]={};
-        p[c.mv][nm].amt = parseFloat(amtI.value)||0; p[c.mv][nm].manual = st.manual; savePay(p); refreshSum();
+        var p = loadPay(); if(!p[c.pk]) p[c.pk]={}; if(!p[c.pk][nm]) p[c.pk][nm]={};
+        p[c.pk][nm].amt = parseFloat(amtI.value)||0; p[c.pk][nm].manual = st.manual; savePay(p); refreshSum();
       });
       row.appendChild(amtI);
       var flags = document.createElement("div"); flags.className = "flags";
       var bt = document.createElement("button"); bt.textContent = "세금계산서"; if(st.tax) bt.classList.add("on");
-      bt.addEventListener("click", function(){
-        var p = loadPay(); p[c.mv][nm].tax = !p[c.mv][nm].tax; savePay(p); render();
-      });
-      var bp = document.createElement("button"); bp.className = "paid"; bp.textContent = "결제완료"; if(st.paid) bp.classList.add("on");
-      bp.addEventListener("click", function(){
-        var p = loadPay(); p[c.mv][nm].paid = !p[c.mv][nm].paid; savePay(p); render();
-      });
+      bt.addEventListener("click", function(){ var p=loadPay(); p[c.pk][nm].tax=!p[c.pk][nm].tax; savePay(p); render(); });
+      var bp = document.createElement("button"); bp.className="paid"; bp.textContent="결제완료"; if(st.paid) bp.classList.add("on");
+      bp.addEventListener("click", function(){ var p=loadPay(); p[c.pk][nm].paid=!p[c.pk][nm].paid; savePay(p); render(); });
       flags.appendChild(bt); flags.appendChild(bp);
       row.appendChild(flags);
       el.appendChild(row);
@@ -2643,16 +2674,29 @@
   }
   function refreshSum(){
     var c = currentRows();
-    var pay = loadPay(); var mp = pay[c.mv] || {};
+    var mp = loadPay()[c.pk] || {};
     var total = 0, paid = 0, due = 0, dueAmt = 0;
     c.names.forEach(function(nm){
       var st = mp[nm] || {}; var amt = +st.amt || 0;
       total += amt;
       if(st.paid) paid += amt; else { due++; dueAmt += amt; }
     });
-    $("y_sum").innerHTML = "이달 업체 <b>" + c.names.length + "곳</b> · 지급예정 <b>" + nf(total) + "원</b>"
+    var head = mode === "site" ? ("현장 <b>" + ($("y_siteSel").value||"-") + "</b>") : ($("y_mon").value + " 기준");
+    $("y_sum").innerHTML = head + " · 업체 <b>" + c.names.length + "곳</b> · 지급예정 <b>" + nf(total) + "원</b>"
       + "<br>결제완료 " + nf(paid) + "원 · <span style='color:var(--red);'>미결제 " + due + "곳 " + nf(dueAmt) + "원</span>";
   }
+
+  function setMode(m){
+    mode = m;
+    $("y_mSite").classList.toggle("on", m==="site");
+    $("y_mMon").classList.toggle("on", m==="month");
+    $("y_siteWrap").style.display = m==="site" ? "" : "none";
+    $("y_monWrap").style.display = m==="month" ? "" : "none";
+    render();
+  }
+  $("y_mSite").addEventListener("click", function(){ setMode("site"); });
+  $("y_mMon").addEventListener("click", function(){ setMode("month"); });
+  $("y_siteSel").addEventListener("change", render);
   $("y_mon").addEventListener("input", render);
   $("y_onlyDue").addEventListener("click", function(){
     onlyDue = !onlyDue; this.classList.toggle("on", onlyDue);
@@ -2663,18 +2707,18 @@
   $("y_addName").addEventListener("keydown", function(e){
     if(e.key !== "Enter") return;
     var v = this.value.trim(); if(!v) return;
-    var mv = $("y_mon").value;
-    var p = loadPay(); if(!p[mv]) p[mv] = {};
-    if(!p[mv][v]) p[mv][v] = {tax:false, paid:false, amt:0, manual:true};
-    else p[mv][v].manual = true;
+    var pk = payKey();
+    var p = loadPay(); if(!p[pk]) p[pk] = {};
+    if(!p[pk][v]) p[pk][v] = {tax:false, paid:false, amt:0, manual:true};
+    else p[pk][v].manual = true;
     savePay(p); this.value = ""; render();
   });
   function buildStatus(){
     var c = currentRows();
-    var pay = loadPay(); var mp = pay[c.mv] || {};
+    var mp = loadPay()[c.pk] || {};
     if(!c.names.length) return "";
-    var ym = c.mv.split("-");
-    var s = "[" + (+ym[0]) + "년 " + (+ym[1]) + "월 업체 결제현황]";
+    var head = mode === "site" ? ("[" + ($("y_siteSel").value) + " 업체 결제현황]") : ("[" + $("y_mon").value + " 업체 결제현황]");
+    var s = head;
     var total = 0, paid = 0;
     c.names.forEach(function(nm){
       var st = mp[nm] || {}; var amt = +st.amt || 0; total += amt; if(st.paid) paid += amt;
@@ -2696,8 +2740,8 @@
     else toastY("공유 미지원");
   });
 
-  window.__renderPay = render;
-  render();
+  window.__renderPay = function(){ setMode(mode); };
+  setMode("site");
 })();
 </script>
 <script>
