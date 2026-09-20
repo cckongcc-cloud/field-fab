@@ -196,7 +196,7 @@
   <div class="tag">제작시안</div>
   <div class="tt">
     <h1>현장 도구</h1>
-    <p>그레이팅 · 엣지 · 일보 · 영수증 · 추가공정 <span style="color:var(--acc); font-weight:700;">v35</span></p>
+    <p>그레이팅 · 엣지 · 일보 · 영수증 · 추가공정 <span style="color:var(--acc); font-weight:700;">v36</span></p>
   </div>
 </header>
 
@@ -416,7 +416,10 @@
       </div>
     </div>
     <div id="r_qlist"><p class="hint">복사·공유한 일보가 자동으로 여기 쌓여요. 기록은 이 폰에만 저장되니 폰을 바꾸기 전엔 아래 내보내기로 백업해 두세요.</p></div>
-    <button id="r_export" type="button">이번 달 일보 파일로 내보내기 (.md)</button>
+    <div style="display:flex; gap:8px;">
+      <button id="r_export" type="button" style="flex:1; background:#2A2E33; color:var(--txt); border:1px solid var(--line); border-radius:10px; padding:12px 6px; font-size:13px; font-weight:800;">파일(.md) 내보내기</button>
+      <button id="r_calMonth" type="button" style="flex:1; background:#2A2E33; color:var(--txt); border:1px solid var(--acc); border-radius:10px; padding:12px 6px; font-size:13px; font-weight:800;">📅 이 달 달력에 넣기</button>
+    </div>
     <div style="border-top:1px dashed var(--line); margin-top:12px; padding-top:12px;">
       <label id="r_impFileBtn" style="display:block; text-align:center; cursor:pointer; background:#2A2E33; border:1px solid var(--acc); color:var(--acc); border-radius:10px; padding:12px 6px; font-size:14px; font-weight:800; margin-bottom:8px;">📄 월간 일보 파일(.md/.txt) 불러오기
         <input type="file" id="r_impFile" accept=".md,.txt,text/plain,text/markdown"
@@ -1808,27 +1811,70 @@
     return head + (firstWork ? " " + firstWork : "");
   }
   function normSiteTitle(s){ return (s||"").replace(/\s*\([^)]*\)\s*/g," ").replace(/\s+/g," ").trim(); }
+  function icsStamp(){
+    var now = new Date();
+    return now.getUTCFullYear() + ("0"+(now.getUTCMonth()+1)).slice(-2) + ("0"+now.getUTCDate()).slice(-2)
+      + "T" + ("0"+now.getUTCHours()).slice(-2) + ("0"+now.getUTCMinutes()).slice(-2) + ("0"+now.getUTCSeconds()).slice(-2) + "Z";
+  }
+  function titleFromEntry(e){
+    var sites = (e.blocks || []).map(function(b){ return normSiteTitle(b.site); }).filter(Boolean);
+    if(!sites.length) return "작업일보";
+    var firstWork = "";
+    for(var i=0;i<(e.blocks||[]).length;i++){ if(e.blocks[i].work){ firstWork = e.blocks[i].work.split(/[,·]/)[0].trim(); break; } }
+    var head = sites.length > 1 ? (sites[0] + " 외 " + (sites.length-1)) : sites[0];
+    return head + (firstWork ? " " + firstWork : "");
+  }
+  function vevent(dISO, title, body, seq){
+    var dt = dISO.replace(/-/g, "");
+    return [
+      "BEGIN:VEVENT",
+      "UID:fieldfab-" + dt + "-" + seq + "@field-fab",
+      "DTSTAMP:" + icsStamp(),
+      "DTSTART;VALUE=DATE:" + dt,
+      "SUMMARY:" + icsEscape(title),
+      "DESCRIPTION:" + icsEscape(body),
+      "TRANSP:TRANSPARENT", "END:VEVENT"
+    ].join("\r\n");
+  }
   function buildICS(){
     var d = $("r_date").value;
     if(!d) return null;
     var title = calTitle();
     if(!title) return null;
     var body = build().split("\n\n내일일정")[0].trim();
-    var dt = d.replace(/-/g, "");
-    var now = new Date();
-    var stamp = now.getUTCFullYear() + ("0"+(now.getUTCMonth()+1)).slice(-2) + ("0"+now.getUTCDate()).slice(-2)
-      + "T" + ("0"+now.getUTCHours()).slice(-2) + ("0"+now.getUTCMinutes()).slice(-2) + ("0"+now.getUTCSeconds()).slice(-2) + "Z";
-    var uid = "fieldfab-" + dt + "-" + now.getTime() + "@field-fab";
-    var lines = [
-      "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//field-fab//KO",
-      "BEGIN:VEVENT", "UID:" + uid, "DTSTAMP:" + stamp,
-      "DTSTART;VALUE=DATE:" + dt,
-      "SUMMARY:" + icsEscape(title),
-      "DESCRIPTION:" + icsEscape(body),
-      "TRANSP:TRANSPARENT", "END:VEVENT", "END:VCALENDAR"
-    ];
-    return {text: lines.join("\r\n"), name: "일보_" + dt + ".ics", title: title};
+    var text = ["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//field-fab//KO",
+      vevent(d, title, body, Date.now()), "END:VCALENDAR"].join("\r\n");
+    return {text: text, name: "일보_" + d.replace(/-/g,"") + ".ics", title: title};
   }
+  function buildICSMonth(monthFilter){
+    var log = loadLog().filter(function(e){ return !monthFilter || e.d.slice(0,7) === monthFilter; });
+    if(!log.length) return null;
+    log.sort(function(a,b){ return a.d < b.d ? -1 : 1; });
+    var evs = log.map(function(e, i){
+      return vevent(e.d, titleFromEntry(e), (e.t || "").split("\n\n내일일정")[0].trim(), Date.now() + "-" + i);
+    });
+    var text = ["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//field-fab//KO"].concat(evs).concat(["END:VCALENDAR"]).join("\r\n");
+    var ym = (monthFilter || "all").replace("-", "");
+    return {text: text, name: "일보달력_" + ym + ".ics", count: log.length};
+  }
+  function sendFile(text, name, mime, okMsg){
+    var blob = new Blob([text], {type: mime});
+    var f = new File([blob], name, {type: mime});
+    if(navigator.canShare && navigator.canShare({files: [f]})){
+      navigator.share({files: [f]}).then(function(){ toastR(okMsg); }).catch(function(){});
+    }else{
+      var a = document.createElement("a");
+      a.href = URL.createObjectURL(blob); a.download = name;
+      document.body.appendChild(a); a.click(); a.remove();
+      toastR(okMsg);
+    }
+  }
+  $("r_calMonth").addEventListener("click", function(){
+    var mv = $("r_mon").value;
+    var ics = buildICSMonth(mv);
+    if(!ics){ toastR("이 달에 저장된 일보가 없어요"); return; }
+    sendFile(ics.text, ics.name, "text/calendar", ics.count + "일치 — 캘린더 앱을 선택하면 한 번에 추가돼요");
+  });
   $("r_btnCal").addEventListener("click", function(){
     if(rMode !== "full"){ toastR("간단 공지는 달력에 넣지 않아요 — 전체 일보에서 사용하세요"); return; }
     var ics = buildICS();
